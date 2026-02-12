@@ -1,0 +1,609 @@
+const form = document.getElementById("upload-form");
+const vendorTypeSelect = document.getElementById("vendor-type");
+const resultPanel = document.getElementById("result-panel");
+const summarySection = document.getElementById("summary-section");
+const usersSection = document.getElementById("adobe-users-section");
+const nonUserSection = document.getElementById("non-user-section");
+const branchAssignmentSection = document.getElementById("branch-assignment-section");
+const supportReviewSection = document.getElementById("support-review-section");
+const usersSectionTitle = document.getElementById("users-section-title");
+const usersSectionHelp = document.getElementById("users-section-help");
+const analyzeBtn = document.getElementById("analyze-btn");
+const saveBranchesBtn = document.getElementById("save-branches-btn");
+const downloadBtn = document.getElementById("download-btn");
+const summaryBody = document.getElementById("summary-body");
+const usersBody = document.getElementById("adobe-users-body");
+const nonUserBody = document.getElementById("non-user-body");
+const branchAssignmentBody = document.getElementById("branch-assignment-body");
+const integricomBranchOptions = document.getElementById("integricom-branch-options");
+const supportReviewBody = document.getElementById("support-review-body");
+const supportBranchOptions = document.getElementById("support-branch-options");
+const summaryCards = document.getElementById("summary-cards");
+const warningsList = document.getElementById("warnings");
+const notesList = document.getElementById("file-notes");
+const reconciliationList = document.getElementById("reconciliation-notes");
+const missingUsersResultsList = document.getElementById("missing-users-results");
+
+let latestCsvText = "";
+let currentUserRows = [];
+let currentUserVendor = "";
+let currentBranchAssignmentPrompts = [];
+let currentSupportRows = [];
+
+function formatMoney(value) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
+}
+
+function displayVendorName(value) {
+  if (value === "integricom") return "Integricom Licensing";
+  if (value === "integricom_support") return "Integricom Support Hours";
+  if (value === "adobe") return "Adobe";
+  if (value === "hexnode") return "Hexnode";
+  if (value === "generic") return "Generic";
+  return value || "";
+}
+
+function refreshAnalyzeButtonLabel() {
+  const vendor = vendorTypeSelect.value;
+  if (vendor === "integricom_support" && currentSupportRows.length) {
+    analyzeBtn.textContent = "Apply Support Branch Review and Recalculate";
+    return;
+  }
+  if (vendor === "integricom" && currentBranchAssignmentPrompts.length) {
+    analyzeBtn.textContent = "Apply Branch Assignments and Recalculate";
+    return;
+  }
+  if ((vendor === "adobe" || vendor === "integricom") && currentUserRows.length) {
+    analyzeBtn.textContent = "Save Branch Updates and Recalculate";
+    return;
+  }
+  analyzeBtn.textContent = "Analyze and Build Breakdown";
+}
+
+function initializeResizableTables() {
+  const tables = document.querySelectorAll("table.resizable-table");
+  tables.forEach((table) => {
+    table.querySelectorAll("thead th").forEach((headerCell) => {
+      if (headerCell.dataset.resizable === "true") {
+        return;
+      }
+      headerCell.dataset.resizable = "true";
+
+      const resizer = document.createElement("span");
+      resizer.className = "col-resizer";
+
+      let startX = 0;
+      let startWidth = 0;
+
+      const handlePointerMove = (event) => {
+        const delta = event.clientX - startX;
+        const nextWidth = Math.max(100, startWidth + delta);
+        headerCell.style.width = `${nextWidth}px`;
+      };
+
+      const handlePointerUp = () => {
+        document.body.classList.remove("col-resize-active");
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", handlePointerUp);
+      };
+
+      resizer.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        startX = event.clientX;
+        startWidth = headerCell.getBoundingClientRect().width;
+        headerCell.style.width = `${startWidth}px`;
+        document.body.classList.add("col-resize-active");
+        window.addEventListener("pointermove", handlePointerMove);
+        window.addEventListener("pointerup", handlePointerUp);
+      });
+
+      headerCell.appendChild(resizer);
+    });
+  });
+}
+
+function clearResults() {
+  summaryBody.innerHTML = "";
+  usersBody.innerHTML = "";
+  nonUserBody.innerHTML = "";
+  branchAssignmentBody.innerHTML = "";
+  integricomBranchOptions.innerHTML = "";
+  supportReviewBody.innerHTML = "";
+  supportBranchOptions.innerHTML = "";
+  warningsList.innerHTML = "";
+  notesList.innerHTML = "";
+  reconciliationList.innerHTML = "";
+  missingUsersResultsList.innerHTML = "";
+  summaryCards.innerHTML = "";
+  downloadBtn.hidden = true;
+  latestCsvText = "";
+  resultPanel.hidden = true;
+  summarySection.hidden = true;
+  usersSection.hidden = true;
+  nonUserSection.hidden = true;
+  branchAssignmentSection.hidden = true;
+  supportReviewSection.hidden = true;
+  saveBranchesBtn.disabled = false;
+  saveBranchesBtn.textContent = "Save Branch Changes";
+  currentBranchAssignmentPrompts = [];
+  currentSupportRows = [];
+}
+
+function addCard(label, value) {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `<div class=\"label\">${label}</div><div class=\"value\">${value}</div>`;
+  summaryCards.appendChild(card);
+}
+
+function renderWarnings(warnings) {
+  warningsList.innerHTML = "";
+  if (!warnings || !warnings.length) {
+    const li = document.createElement("li");
+    li.textContent = "No warnings.";
+    warningsList.appendChild(li);
+    return;
+  }
+
+  warnings.forEach((warning) => {
+    const li = document.createElement("li");
+    li.textContent = warning;
+    warningsList.appendChild(li);
+  });
+}
+
+function renderMissingUsers(missingUsers) {
+  missingUsersResultsList.innerHTML = "";
+  if (!missingUsers || !missingUsers.length) {
+    const li = document.createElement("li");
+    li.textContent = "No missing users detected.";
+    missingUsersResultsList.appendChild(li);
+    return;
+  }
+
+  missingUsers.forEach((user) => {
+    const li = document.createElement("li");
+    const name = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+    const label = name ? `${name} (${user.email})` : user.email;
+    li.textContent = `${label} - ${user.branch || "Unknown Branch"}`;
+    missingUsersResultsList.appendChild(li);
+  });
+}
+
+function renderSummaryTable(summary) {
+  summaryBody.innerHTML = "";
+  summary.forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.branch}</td>
+      <td>${row.license}</td>
+      <td>${formatMoney(row.total_amount)}</td>
+    `;
+    summaryBody.appendChild(tr);
+  });
+}
+
+function renderUserTable(rows) {
+  usersBody.innerHTML = "";
+  currentUserRows = rows || [];
+
+  currentUserRows.forEach((user, idx) => {
+    const tr = document.createElement("tr");
+    const missingClass = user.branch ? "" : " style=\"background:#fff9e6;\"";
+    tr.innerHTML = `
+      <td${missingClass}>${user.first_name || ""}</td>
+      <td${missingClass}>${user.last_name || ""}</td>
+      <td${missingClass}>${user.email || ""}</td>
+      <td${missingClass}><input type="text" id="user-branch-${idx}" value="${user.branch || ""}" placeholder="Branch" /></td>
+      <td${missingClass}>${user.license_list || ""}</td>
+      <td${missingClass}>${formatMoney(user.user_total || 0)}</td>
+    `;
+    usersBody.appendChild(tr);
+  });
+}
+
+function renderNonUserTable(rows) {
+  nonUserBody.innerHTML = "";
+  (rows || []).forEach((row) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.branch || ""}</td>
+      <td>${row.license || ""}</td>
+      <td>${row.allocation_type || ""}</td>
+      <td>${formatMoney(row.total_amount || 0)}</td>
+    `;
+    nonUserBody.appendChild(tr);
+  });
+}
+
+function renderBranchAssignmentPrompts(prompts) {
+  branchAssignmentBody.innerHTML = "";
+  integricomBranchOptions.innerHTML = "";
+  currentBranchAssignmentPrompts = prompts || [];
+
+  const optionSet = new Set();
+  currentBranchAssignmentPrompts.forEach((prompt) => {
+    (prompt.available_branches || []).forEach((branch) => optionSet.add(branch));
+  });
+  [...optionSet].sort().forEach((branch) => {
+    const option = document.createElement("option");
+    option.value = branch;
+    integricomBranchOptions.appendChild(option);
+  });
+
+  currentBranchAssignmentPrompts.forEach((prompt, idx) => {
+    const tr = document.createElement("tr");
+    const assignedLabel = (prompt.already_assigned_branches || []).join(", ");
+    const existingValue = prompt.branch || "";
+    const error = prompt.validation_error || "";
+    const inputStyle = error ? " style=\"background:#fff1f2;\"" : "";
+    tr.innerHTML = `
+      <td>${prompt.license || ""}</td>
+      <td>${formatMoney(prompt.unit_price || 0)}</td>
+      <td>${prompt.prompt_index || idx + 1}</td>
+      <td>${assignedLabel || "None"}</td>
+      <td${inputStyle}>
+        <input
+          type="text"
+          id="branch-assignment-${idx}"
+          list="integricom-branch-options"
+          value="${existingValue}"
+          placeholder="Enter branch"
+        />
+        ${error ? `<div class="cell-error">${error}</div>` : ""}
+      </td>
+    `;
+    branchAssignmentBody.appendChild(tr);
+  });
+}
+
+function renderSupportReviewTable(rows, branchOptions) {
+  supportReviewBody.innerHTML = "";
+  supportBranchOptions.innerHTML = "";
+  currentSupportRows = rows || [];
+
+  const optionSet = new Set(branchOptions || []);
+  currentSupportRows.forEach((row) => optionSet.add(row.branch || ""));
+  [...optionSet]
+    .filter((value) => value)
+    .sort()
+    .forEach((branch) => {
+      const option = document.createElement("option");
+      option.value = branch;
+      supportBranchOptions.appendChild(option);
+    });
+
+  currentSupportRows.forEach((row, idx) => {
+    const needsReview = Boolean(row.needs_review);
+    const rowStyle = needsReview ? " style=\"background:#fff9e6;\"" : "";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td${rowStyle}>${row.charge_summary || ""}</td>
+      <td${rowStyle}>${formatMoney(row.amount || 0)}</td>
+      <td${rowStyle}>${(row.billable_hours || 0).toFixed(2)}</td>
+      <td${rowStyle}>
+        <input
+          type="text"
+          id="support-branch-${idx}"
+          list="support-branch-options"
+          value="${row.branch || ""}"
+          placeholder="Branch"
+        />
+      </td>
+      <td${rowStyle}>${row.confidence || ""}</td>
+      <td${rowStyle}>${row.assignment_reason || ""}</td>
+    `;
+    supportReviewBody.appendChild(tr);
+  });
+}
+
+function collectUserUpdates() {
+  return currentUserRows.map((user, idx) => ({
+    email: user.email,
+    first_name: user.first_name || "",
+    last_name: user.last_name || "",
+    branch: (document.getElementById(`user-branch-${idx}`)?.value || user.branch || "").trim(),
+  }));
+}
+
+function collectBranchAssignmentUpdates() {
+  return currentBranchAssignmentPrompts.map((prompt, idx) => ({
+    line_key: prompt.line_key,
+    prompt_index: prompt.prompt_index,
+    branch: (document.getElementById(`branch-assignment-${idx}`)?.value || prompt.branch || "").trim(),
+  }));
+}
+
+function collectSupportUpdates() {
+  return currentSupportRows.map((row, idx) => ({
+    row_key: row.row_key,
+    branch: (document.getElementById(`support-branch-${idx}`)?.value || row.branch || "").trim(),
+  }));
+}
+
+function setUsersSectionCopy(vendorType) {
+  if (vendorType === "integricom") {
+    usersSectionTitle.textContent = "Integricom Users";
+  } else {
+    usersSectionTitle.textContent = "Adobe Users";
+  }
+  usersSectionHelp.textContent = "Branch is editable. Save branch edits here, then Analyze to recalculate totals if needed.";
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const payload = new FormData();
+  const vendorType = vendorTypeSelect.value;
+  const invoiceFile = document.getElementById("invoice-file").files[0];
+  const csvFiles = document.getElementById("csv-files").files;
+
+  if (!csvFiles.length && vendorType !== "integricom_support") {
+    alert("Please add at least one CSV file.");
+    return;
+  }
+
+  if (
+    (vendorType === "adobe" ||
+      vendorType === "hexnode" ||
+      vendorType === "integricom" ||
+      vendorType === "integricom_support") &&
+    !invoiceFile
+  ) {
+    alert("This vendor mode requires an invoice upload.");
+    return;
+  }
+
+  const pendingUserUpdates =
+    (vendorType === "adobe" || vendorType === "integricom") && currentUserRows.length ? collectUserUpdates() : [];
+  const pendingBranchAssignmentUpdates =
+    vendorType === "integricom" && currentBranchAssignmentPrompts.length ? collectBranchAssignmentUpdates() : [];
+  const pendingSupportUpdates =
+    vendorType === "integricom_support" && currentSupportRows.length ? collectSupportUpdates() : [];
+
+  clearResults();
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = "Analyzing...";
+
+  try {
+    payload.append("vendor_type", vendorType);
+
+    if (invoiceFile) {
+      payload.append("invoice_file", invoiceFile);
+    }
+
+    if (pendingUserUpdates.length) {
+      if (vendorType === "adobe") {
+        payload.append("adobe_user_updates", JSON.stringify(pendingUserUpdates));
+      }
+      if (vendorType === "integricom") {
+        payload.append("integricom_user_updates", JSON.stringify(pendingUserUpdates));
+      }
+    }
+    if (vendorType === "integricom" && pendingBranchAssignmentUpdates.length) {
+      payload.append("integricom_branch_item_updates", JSON.stringify(pendingBranchAssignmentUpdates));
+    }
+    if (vendorType === "integricom_support" && pendingSupportUpdates.length) {
+      payload.append("integricom_support_updates", JSON.stringify(pendingSupportUpdates));
+    }
+
+    for (const file of csvFiles) {
+      payload.append("csv_files", file);
+    }
+
+    const response = await fetch("/api/analyze", {
+      method: "POST",
+      body: payload,
+    });
+
+    if (!response.ok) {
+      const failure = await response.json();
+      throw new Error(failure.detail || "Upload failed.");
+    }
+
+    const data = await response.json();
+
+    addCard("Grand Total", formatMoney(data.totals.grand_total));
+    addCard("Breakdown Lines", data.totals.line_items);
+    addCard("Source Files", data.files.length);
+    addCard("Mode", displayVendorName(data.vendor_type));
+
+    if (data.invoice) {
+      addCard("Invoice Reference", data.invoice.filename);
+    }
+
+    data.files.forEach((entry) => {
+      const li = document.createElement("li");
+      li.textContent = `${entry.filename}: ingested ${entry.rows_ingested}, skipped ${entry.rows_skipped}`;
+      notesList.appendChild(li);
+    });
+
+    if (!data.files.length) {
+      const li = document.createElement("li");
+      li.textContent =
+        data.vendor_type === "integricom_support"
+          ? "Invoice-only mode: no CSV files were ingested."
+          : "No valid CSV rows were ingested.";
+      notesList.appendChild(li);
+    }
+
+    if (data.reconciliation) {
+      const base = document.createElement("li");
+      base.textContent = `CSV base total: ${formatMoney(data.reconciliation.base_total)}`;
+      reconciliationList.appendChild(base);
+
+      const inv = document.createElement("li");
+      inv.textContent = `Invoice total: ${formatMoney(data.reconciliation.invoice_total)}`;
+      reconciliationList.appendChild(inv);
+
+      const adj = document.createElement("li");
+      adj.textContent = `Home Office adjustment applied: ${formatMoney(data.reconciliation.home_office_adjustment)}`;
+      reconciliationList.appendChild(adj);
+    } else {
+      const li = document.createElement("li");
+      li.textContent = "No invoice reconciliation applied.";
+      reconciliationList.appendChild(li);
+    }
+
+    renderMissingUsers(data.missing_users || []);
+    renderWarnings(data.warnings || []);
+
+    if (data.vendor_type === "integricom_support") {
+      currentUserRows = [];
+      currentUserVendor = "";
+      renderUserTable([]);
+      renderNonUserTable([]);
+      renderBranchAssignmentPrompts([]);
+      usersSection.hidden = true;
+      nonUserSection.hidden = true;
+      branchAssignmentSection.hidden = true;
+
+      const supportRows = data.support_rows || data.integricom_support_rows || [];
+      renderSupportReviewTable(supportRows, data.support_branch_options || []);
+      supportReviewSection.hidden = false;
+
+      renderSummaryTable(data.summary || []);
+      summarySection.hidden = false;
+
+      if (data.needs_support_review) {
+        const li = document.createElement("li");
+        li.textContent =
+          data.message ||
+          "Some support blocks were defaulted to Home Office with low confidence. Review branch assignments.";
+        warningsList.prepend(li);
+      }
+    } else if (data.vendor_type === "adobe" || data.vendor_type === "integricom") {
+      const rows = data.user_rows || data.adobe_user_rows || data.integricom_user_rows || [];
+      renderUserTable(rows);
+      currentUserVendor = data.vendor_type;
+      renderSupportReviewTable([], []);
+      supportReviewSection.hidden = true;
+      setUsersSectionCopy(data.vendor_type);
+      usersSection.hidden = false;
+      if (data.vendor_type === "integricom") {
+        const nonUserRows = data.non_user_rows || data.integricom_non_user_rows || [];
+        const branchPrompts = data.non_user_branch_prompts || data.integricom_non_user_branch_prompts || [];
+        renderNonUserTable(nonUserRows);
+        renderBranchAssignmentPrompts(branchPrompts);
+        nonUserSection.hidden = false;
+        branchAssignmentSection.hidden = !branchPrompts.length;
+      } else {
+        renderNonUserTable([]);
+        renderBranchAssignmentPrompts([]);
+        nonUserSection.hidden = true;
+        branchAssignmentSection.hidden = true;
+      }
+      summarySection.hidden = true;
+
+      if (data.needs_user_enrichment) {
+        const li = document.createElement("li");
+        li.textContent = data.message || "Some users still need branch values.";
+        warningsList.prepend(li);
+      }
+      if (data.needs_non_user_branch_assignment && !data.needs_user_enrichment) {
+        const li = document.createElement("li");
+        li.textContent =
+          data.message ||
+          "Some branch-tethered non-user charges need branch assignments before the breakdown can be finalized.";
+        warningsList.prepend(li);
+      }
+    } else {
+      currentUserRows = [];
+      currentUserVendor = "";
+      renderSupportReviewTable([], []);
+      renderBranchAssignmentPrompts([]);
+      renderSummaryTable(data.summary || []);
+      renderNonUserTable([]);
+      summarySection.hidden = false;
+      usersSection.hidden = true;
+      nonUserSection.hidden = true;
+      branchAssignmentSection.hidden = true;
+      supportReviewSection.hidden = true;
+    }
+
+    latestCsvText = data.breakdown_csv || "";
+    if (latestCsvText) {
+      downloadBtn.hidden = false;
+    }
+
+    resultPanel.hidden = false;
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    analyzeBtn.disabled = false;
+    refreshAnalyzeButtonLabel();
+  }
+});
+
+saveBranchesBtn.addEventListener("click", async () => {
+  if (!currentUserRows.length || !currentUserVendor) {
+    alert("No users loaded yet. Run an Adobe or Integricom analysis first.");
+    return;
+  }
+
+  const saveEndpoint =
+    currentUserVendor === "integricom" ? "/api/integricom/users/save" : "/api/adobe/users/save";
+
+  const updates = collectUserUpdates();
+  const originalText = saveBranchesBtn.textContent;
+  saveBranchesBtn.disabled = true;
+  saveBranchesBtn.textContent = "Saving...";
+
+  try {
+    const response = await fetch(saveEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) {
+      const failure = await response.json();
+      throw new Error(failure.detail || "Save failed.");
+    }
+
+    const result = await response.json();
+    currentUserRows = currentUserRows.map((user, idx) => ({
+      ...user,
+      branch: updates[idx].branch,
+    }));
+    renderUserTable(currentUserRows);
+
+    const li = document.createElement("li");
+    li.textContent = `Saved branch updates for ${result.saved} users.`;
+    warningsList.prepend(li);
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    saveBranchesBtn.disabled = false;
+    saveBranchesBtn.textContent = originalText;
+    refreshAnalyzeButtonLabel();
+  }
+});
+
+downloadBtn.addEventListener("click", () => {
+  if (!latestCsvText) {
+    return;
+  }
+
+  const blob = new Blob([latestCsvText], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "breakdown.csv";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+});
+
+vendorTypeSelect.addEventListener("change", () => {
+  currentUserRows = [];
+  currentUserVendor = "";
+  currentBranchAssignmentPrompts = [];
+  currentSupportRows = [];
+  refreshAnalyzeButtonLabel();
+});
+
+initializeResizableTables();
+refreshAnalyzeButtonLabel();

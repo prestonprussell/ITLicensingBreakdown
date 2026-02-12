@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AP License Allocation</title>
+    <link rel="stylesheet" href="/static/styles.css?v=2026-02-12-6" />
+  </head>
+  <body>
+    <main class="container">
+      <section class="panel">
+        <h1>AP License Allocation</h1>
+        <p>Upload invoice/reference files and one or more license export CSVs.</p>
+
+        <form id="upload-form">
+          <label>
+            Vendor Type
+            <select id="vendor-type" name="vendor_type">
+              <option value="hexnode">Hexnode</option>
+              <option value="adobe">Adobe</option>
+              <option value="integricom">Integricom Licensing</option>
+              <option value="integricom_support">Integricom Support Hours</option>
+              <option value="generic">Generic (other CSV sources)</option>
+            </select>
+          </label>
+
+          <label>
+            Invoice (required for Hexnode, Adobe, Integricom Licensing, and Integricom Support Hours)
+            <input type="file" id="invoice-file" name="invoice_file" />
+          </label>
+
+          <label>
+            License Export CSVs (required except Integricom Support Hours)
+            <input type="file" id="csv-files" name="csv_files" accept=".csv,text/csv" multiple />
+          </label>
+
+          <button type="submit" id="analyze-btn">Analyze and Build Breakdown</button>
+        </form>
+      </section>
+
+      <section class="panel" id="result-panel" hidden>
+        <h2>Breakdown</h2>
+
+        <div id="branch-assignment-section" hidden>
+          <h3>Branch Assignment Needed</h3>
+          <p>
+            Extra branch-tethered quantities require assignment. Already-assigned branches are shown to help avoid
+            duplicates.
+          </p>
+          <div class="table-wrap">
+            <table class="resizable-table">
+              <thead>
+                <tr>
+                  <th>Charge</th>
+                  <th>Unit Price</th>
+                  <th>Extra Unit #</th>
+                  <th>Already Assigned Branches</th>
+                  <th>Assign Branch</th>
+                </tr>
+              </thead>
+              <tbody id="branch-assignment-body"></tbody>
+            </table>
+          </div>
+          <datalist id="integricom-branch-options"></datalist>
+        </div>
+
+        <div id="support-review-section" hidden>
+          <h3>Support Billable Blocks (Bill = Y)</h3>
+          <p>
+            Branches are auto-suggested from ticket text. Low-confidence rows default to Home Office and are highlighted
+            for review.
+          </p>
+          <div class="table-wrap">
+            <table class="resizable-table">
+              <thead>
+                <tr>
+                  <th>Charge Summary</th>
+                  <th>Billable Amount</th>
+                  <th>Hours</th>
+                  <th>Branch</th>
+                  <th>Confidence</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody id="support-review-body"></tbody>
+            </table>
+          </div>
+          <datalist id="support-branch-options"></datalist>
+        </div>
+
+        <div id="summary-cards" class="cards"></div>
+
+        <button id="download-btn" type="button" hidden>Download breakdown.csv</button>
+
+        <div id="adobe-users-section" hidden>
+          <h3 id="users-section-title">Users</h3>
+          <p id="users-section-help">Branch is editable. Save branch edits here, then Analyze to recalculate totals if needed.</p>
+          <button id="save-branches-btn" type="button">Save Branch Changes</button>
+          <div class="table-wrap">
+            <table class="resizable-table">
+              <thead>
+                <tr>
+                  <th>First</th>
+                  <th>Last</th>
+                  <th>Email</th>
+                  <th>Branch</th>
+                  <th>Licenses</th>
+                  <th>User Total</th>
+                </tr>
+              </thead>
+              <tbody id="adobe-users-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="non-user-section" hidden>
+          <h3>Non-User Branch Charges</h3>
+          <p>Fixed branch-level allocations and invoice delta adjustments.</p>
+          <div class="table-wrap">
+            <table class="resizable-table">
+              <thead>
+                <tr>
+                  <th>Branch</th>
+                  <th>Charge</th>
+                  <th>Type</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="non-user-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="summary-section" hidden>
+          <h3>Totals By Branch and License</h3>
+          <div class="table-wrap">
+            <table class="resizable-table">
+              <thead>
+                <tr>
+                  <th>Branch</th>
+                  <th>License</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="summary-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <h3>File Processing Notes</h3>
+        <ul id="file-notes"></ul>
+
+        <h3>Reconciliation</h3>
+        <ul id="reconciliation-notes"></ul>
+
+        <h3>Users Missing From Current Export</h3>
+        <ul id="missing-users-results"></ul>
+
+        <h3>Warnings</h3>
+        <ul id="warnings"></ul>
+      </section>
+    </main>
+
+    <script src="/static/app.js?v=2026-02-12-6" defer></script>
+  </body>
+</html>

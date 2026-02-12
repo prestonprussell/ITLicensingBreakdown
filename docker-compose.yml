@@ -1,0 +1,11 @@
+services:
+  ap-allocation-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ap-allocation-app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./app/data:/app/app/data
+    restart: unless-stopped
