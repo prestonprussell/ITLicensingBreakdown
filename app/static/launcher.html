@@ -11,11 +11,15 @@
           const stored = localStorage.getItem("codexplayground-theme");
           if (stored === "light" || stored === "dark") {
             document.documentElement.setAttribute("data-theme", stored);
+            return;
+          }
+          if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+            document.documentElement.setAttribute("data-theme", "light");
           }
         } catch (_error) {}
       })();
     </script>
-    <link rel="stylesheet" href="/static/styles.css?v=2026-02-13-3" />
+    <link rel="stylesheet" href="/static/styles.css?v=2026-02-13-4" />
   </head>
   <body>
     <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light and dark mode">
@@ -24,9 +28,15 @@
     <main class="container launcher-container">
       <section class="launcher-brand">
         <img
-          class="launcher-logo"
+          class="launcher-logo launcher-logo-dark"
           src="/static/codexplayground-logo.png?v=2026-02-13-3"
           alt="CodexPlayground"
+        />
+        <img
+          class="launcher-logo launcher-logo-light"
+          src="/static/codexplayground-logo-light.png?v=2026-02-13-1"
+          alt=""
+          aria-hidden="true"
         />
       </section>
 
