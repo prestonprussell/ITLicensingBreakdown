@@ -32,6 +32,9 @@
   --success-surface-border: #2fa77f;
   --success-surface-bg: linear-gradient(180deg, #14392f 0%, #102d25 100%);
   --summary-card-bg: #1d2940;
+  --toggle-bg: #e8edf7;
+  --toggle-ink: #111827;
+  --toggle-border: #c9d3e8;
 }
 
 :root[data-theme="light"] {
@@ -68,6 +71,9 @@
   --success-surface-border: #10b981;
   --success-surface-bg: linear-gradient(180deg, #ecfdf5 0%, #e7f9f1 100%);
   --summary-card-bg: #fbfdff;
+  --toggle-bg: #1f2937;
+  --toggle-ink: #f8fafc;
+  --toggle-border: #111827;
 }
 
 * {
@@ -87,6 +93,11 @@ body {
   padding: 24px;
   display: grid;
   gap: 18px;
+}
+
+.site-toolbar {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .panel {
@@ -286,13 +297,9 @@ button:hover {
 }
 
 .theme-toggle {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 1100;
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--ink);
+  border: 1px solid var(--toggle-border);
+  background: var(--toggle-bg);
+  color: var(--toggle-ink);
   border-radius: 999px;
   box-shadow: var(--panel-shadow);
   padding: 7px 12px;
