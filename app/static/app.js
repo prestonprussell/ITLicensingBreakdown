@@ -189,7 +189,7 @@ function renderUserTable(rows) {
 
   currentUserRows.forEach((user, idx) => {
     const tr = document.createElement("tr");
-    const missingClass = user.branch ? "" : " style=\"background:#fff9e6;\"";
+    const missingClass = user.branch ? "" : " style=\"background:rgba(245, 158, 11, 0.18);\"";
     tr.innerHTML = `
       <td${missingClass}>${user.first_name || ""}</td>
       <td${missingClass}>${user.last_name || ""}</td>
@@ -236,7 +236,7 @@ function renderBranchAssignmentPrompts(prompts) {
     const assignedLabel = (prompt.already_assigned_branches || []).join(", ");
     const existingValue = prompt.branch || "";
     const error = prompt.validation_error || "";
-    const inputStyle = error ? " style=\"background:#fff1f2;\"" : "";
+    const inputStyle = error ? " style=\"background:rgba(248, 113, 113, 0.2);\"" : "";
     tr.innerHTML = `
       <td>${prompt.license || ""}</td>
       <td>${formatMoney(prompt.unit_price || 0)}</td>
@@ -275,7 +275,7 @@ function renderSupportReviewTable(rows, branchOptions) {
 
   currentSupportRows.forEach((row, idx) => {
     const needsReview = Boolean(row.needs_review);
-    const rowStyle = needsReview ? " style=\"background:#fff9e6;\"" : "";
+    const rowStyle = needsReview ? " style=\"background:rgba(245, 158, 11, 0.18);\"" : "";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td${rowStyle}>${row.charge_summary || ""}</td>

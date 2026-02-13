@@ -1,11 +1,13 @@
 :root {
-  --bg: #f4f6f8;
-  --card: #ffffff;
-  --ink: #1f2937;
-  --accent: #0b6bcb;
-  --muted: #6b7280;
-  --line: #d1d5db;
-  --ok: #0b8457;
+  --bg: #111827;
+  --card: #1a2334;
+  --ink: #e6edf8;
+  --accent: #9bb8f2;
+  --muted: #9caac2;
+  --line: #2d3c58;
+  --ok: #7ad7aa;
+  --input-bg: #121b2b;
+  --table-head: #22304a;
 }
 
 * {
@@ -15,7 +17,7 @@
 body {
   margin: 0;
   font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background: linear-gradient(160deg, #f5f9ff 0%, #eef2f5 40%, #f8fafc 100%);
+  background: linear-gradient(155deg, #0f1522 0%, #121a2a 45%, #1a2438 100%);
   color: var(--ink);
 }
 
@@ -32,7 +34,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 8px 24px rgba(31, 41, 55, 0.06);
+  box-shadow: 0 14px 30px rgba(6, 10, 19, 0.42);
 }
 
 h1,
@@ -60,9 +62,9 @@ h3 {
 }
 
 .chip {
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
-  background: #eff6ff;
+  border: 1px solid #4a5f87;
+  color: #d7e3ff;
+  background: rgba(71, 96, 141, 0.4);
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 700;
@@ -77,16 +79,25 @@ p {
   max-width: 980px;
 }
 
+.launcher-brand {
+  border-color: #40597f;
+  background: radial-gradient(80% 130% at 50% 0%, #22324f 0%, #171f31 58%, #141c2b 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .launcher-hero {
-  border-color: #bfdbfe;
-  background: linear-gradient(145deg, #eff6ff 0%, #f8fbff 60%, #f7fafc 100%);
+  border-color: #3a4f75;
+  background: linear-gradient(145deg, #1e2a41 0%, #1a2438 60%, #172131 100%);
 }
 
 .launcher-logo {
   display: block;
   width: min(100%, 560px);
   height: auto;
-  margin: 0 0 8px;
+  margin: 0 auto;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.55));
 }
 
 .app-grid {
@@ -98,7 +109,7 @@ p {
 .app-card {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fff;
+  background: #1b263b;
   padding: 16px;
   display: grid;
   gap: 10px;
@@ -115,17 +126,17 @@ p {
 }
 
 .app-card-live {
-  border-color: #93c5fd;
-  box-shadow: 0 12px 28px rgba(29, 78, 216, 0.11);
+  border-color: #4f6f9e;
+  box-shadow: 0 12px 28px rgba(4, 9, 17, 0.45);
 }
 
 .app-card-live:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 32px rgba(29, 78, 216, 0.15);
+  box-shadow: 0 18px 34px rgba(4, 9, 17, 0.55);
 }
 
 .app-card-soon {
-  background: #f8fafc;
+  background: #172133;
   border-style: dashed;
 }
 
@@ -135,9 +146,9 @@ p {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border: 1px solid #526d99;
+  background: rgba(75, 100, 149, 0.35);
+  color: #dbe6ff;
 }
 
 .app-link {
@@ -161,14 +172,16 @@ input[type="file"] {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--ink);
 }
 
 select {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--ink);
 }
 
 input[type="text"] {
@@ -176,6 +189,8 @@ input[type="text"] {
   border-radius: 6px;
   padding: 6px 8px;
   width: 100%;
+  background: var(--input-bg);
+  color: var(--ink);
 }
 
 button {
@@ -183,7 +198,7 @@ button {
   border: none;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: #0f172a;
   padding: 10px 14px;
   font-weight: 700;
   cursor: pointer;
@@ -204,7 +219,7 @@ button:hover {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
-  background: #fbfdff;
+  background: #1d2940;
 }
 
 .card .label {
@@ -219,9 +234,9 @@ button:hover {
 }
 
 #branch-assignment-section {
-  border: 1px solid #f59e0b;
+  border: 1px solid #c07f28;
   border-radius: 10px;
-  background: linear-gradient(180deg, #fffbeb 0%, #fff7df 100%);
+  background: linear-gradient(180deg, #3a2a12 0%, #2f230f 100%);
   padding: 14px;
   margin-bottom: 12px;
 }
@@ -231,9 +246,9 @@ button:hover {
 }
 
 #support-review-section {
-  border: 1px solid #10b981;
+  border: 1px solid #2fa77f;
   border-radius: 10px;
-  background: linear-gradient(180deg, #ecfdf5 0%, #e7f9f1 100%);
+  background: linear-gradient(180deg, #14392f 0%, #102d25 100%);
   padding: 14px;
   margin-bottom: 12px;
 }
@@ -246,7 +261,7 @@ button:hover {
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: #162133;
 }
 
 table {
@@ -278,7 +293,7 @@ table {
   bottom: 20%;
   right: 4px;
   width: 1px;
-  background: #9ca3af;
+  background: #a6b3c9;
   opacity: 0.25;
 }
 
@@ -313,11 +328,11 @@ td {
 .cell-error {
   margin-top: 4px;
   font-size: 0.78rem;
-  color: #b91c1c;
+  color: #fca5a5;
 }
 
 thead {
-  background: #f2f6fa;
+  background: var(--table-head);
 }
 
 ul {
