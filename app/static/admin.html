@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Directory Admin</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2026-02-13-1" />
+    <script>
+      (() => {
+        try {
+          const stored = localStorage.getItem("codexplayground-theme");
+          if (stored === "light" || stored === "dark") {
+            document.documentElement.setAttribute("data-theme", stored);
+            return;
+          }
+          if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+            document.documentElement.setAttribute("data-theme", "light");
+          }
+        } catch (_error) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/styles.css?v=2026-02-13-5" />
+  </head>
+  <body>
+    <main class="container">
+      <div class="site-toolbar">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light and dark mode">
+          Light Mode
+        </button>
+      </div>
+
+      <section class="panel">
+        <div class="panel-nav">
+          <a class="home-link" href="/">All Apps</a>
+          <span class="chip">Admin</span>
+        </div>
+        <h1>Directory Admin</h1>
+        <p>Update user branch mappings for Adobe and Integricom, add new users, or deactivate old users.</p>
+
+        <div class="admin-toolbar">
+          <label>
+            Directory
+            <select id="admin-vendor">
+              <option value="adobe">Adobe</option>
+              <option value="integricom">Integricom</option>
+            </select>
+          </label>
+
+          <label>
+            Search
+            <input id="admin-search" type="text" placeholder="Search name, email, branch" />
+          </label>
+
+          <button id="admin-reload-btn" type="button" class="btn-secondary">Reload</button>
+          <button id="admin-add-btn" type="button" class="btn-secondary">Add User</button>
+          <button id="admin-save-btn" type="button">Save Changes</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Active User Mappings</h2>
+        <p id="admin-status" class="admin-status">Loading users...</p>
+        <div class="table-wrap">
+          <table class="resizable-table">
+            <thead>
+              <tr>
+                <th>First</th>
+                <th>Last</th>
+                <th>Email</th>
+                <th>Branch</th>
+                <th>Last Seen</th>
+                <th>Updated</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/theme.js?v=2026-02-13-1" defer></script>
+    <script src="/static/admin.js?v=2026-02-13-1" defer></script>
+  </body>
+</html>

@@ -58,6 +58,7 @@ docker compose up --build -d
 Open:
 - App launcher: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 - Invoice Analyzer: [http://127.0.0.1:8080/apps/invoice-analyzer](http://127.0.0.1:8080/apps/invoice-analyzer)
+- Admin: [http://127.0.0.1:8080/apps/admin](http://127.0.0.1:8080/apps/admin)
 
 Useful commands:
 
@@ -83,6 +84,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 Open:
 - App launcher: [http://127.0.0.1:8080](http://127.0.0.1:8080)
 - Invoice Analyzer: [http://127.0.0.1:8080/apps/invoice-analyzer](http://127.0.0.1:8080/apps/invoice-analyzer)
+- Admin: [http://127.0.0.1:8080/apps/admin](http://127.0.0.1:8080/apps/admin)
 
 ## Windows quick start (PowerShell)
 
@@ -106,6 +108,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
   - `integricom_support_updates`: optional JSON array used when Integricom Support Hours mode applies branch review edits
 - `POST /api/adobe/users/save` (JSON array) to save Adobe user branch edits
 - `POST /api/integricom/users/save` (JSON array) to save Integricom user branch edits
+- `GET /api/adobe/users` and `GET /api/integricom/users` to list active directory users for admin tooling
+- `POST /api/adobe/users/deactivate` and `POST /api/integricom/users/deactivate` with `{"emails":[...]}` to deactivate users
 
 ## Expected CSV fields
 

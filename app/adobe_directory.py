@@ -125,15 +125,16 @@ def init_adobe_directory() -> None:
         conn.commit()
 
 
-def list_adobe_users() -> dict[str, AdobeDirectoryUser]:
+def list_adobe_users(*, active_only: bool = False) -> dict[str, AdobeDirectoryUser]:
     init_adobe_directory()
     with _connect() as conn:
-        rows = conn.execute(
-            """
+        query = """
             SELECT email, first_name, last_name, branch, is_active, created_at, updated_at, last_seen_at
             FROM adobe_users
-            """
-        ).fetchall()
+        """
+        if active_only:
+            query += " WHERE is_active = 1"
+        rows = conn.execute(query).fetchall()
 
     users: dict[str, AdobeDirectoryUser] = {}
     for row in rows:
@@ -265,3 +266,27 @@ def find_missing_users(current_emails: set[str]) -> list[AdobeDirectoryUser]:
             )
         )
     return missing
+
+
+def deactivate_adobe_users(emails: list[str]) -> int:
+    if not emails:
+        return 0
+
+    init_adobe_directory()
+    now = _utc_now()
+    normalized = sorted({(email or "").strip().lower() for email in emails if (email or "").strip()})
+    if not normalized:
+        return 0
+
+    placeholders = ",".join("?" for _ in normalized)
+    with _connect() as conn:
+        result = conn.execute(
+            f"""
+            UPDATE adobe_users
+            SET is_active = 0, updated_at = ?
+            WHERE LOWER(TRIM(email)) IN ({placeholders})
+            """,
+            (now, *normalized),
+        )
+        conn.commit()
+        return int(result.rowcount or 0)

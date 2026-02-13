@@ -35,6 +35,10 @@
   --toggle-bg: #e8edf7;
   --toggle-ink: #111827;
   --toggle-border: #c9d3e8;
+  --btn-secondary-bg: #354969;
+  --btn-secondary-ink: #e6edf8;
+  --btn-danger-bg: #7f1d1d;
+  --btn-danger-ink: #fee2e2;
 }
 
 :root[data-theme="light"] {
@@ -74,6 +78,10 @@
   --toggle-bg: #1f2937;
   --toggle-ink: #f8fafc;
   --toggle-border: #111827;
+  --btn-secondary-bg: #e5e7eb;
+  --btn-secondary-ink: #1f2937;
+  --btn-danger-bg: #fee2e2;
+  --btn-danger-ink: #991b1b;
 }
 
 * {
@@ -296,6 +304,16 @@ button:hover {
   filter: brightness(1.05);
 }
 
+.btn-secondary {
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-ink);
+}
+
+.btn-danger {
+  background: var(--btn-danger-bg);
+  color: var(--btn-danger-ink);
+}
+
 .theme-toggle {
   border: 1px solid var(--toggle-border);
   background: var(--toggle-bg);
@@ -310,6 +328,29 @@ button:hover {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+}
+
+.admin-toolbar label {
+  min-width: 220px;
+}
+
+.admin-status {
+  margin-bottom: 12px;
+}
+
+.admin-status.ok {
+  color: var(--ok);
+}
+
+.admin-status.error {
+  color: var(--error-color);
 }
 
 .card {

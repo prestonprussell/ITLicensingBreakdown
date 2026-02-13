@@ -10,8 +10,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .adobe_directory import find_missing_users, init_adobe_directory, list_adobe_users, touch_seen_users, upsert_adobe_users
+from .adobe_directory import (
+    deactivate_adobe_users as deactivate_adobe_directory_users,
+    find_missing_users,
+    init_adobe_directory,
+    list_adobe_users,
+    touch_seen_users,
+    upsert_adobe_users,
+)
 from .integricom_directory import (
+    deactivate_integricom_users as deactivate_integricom_directory_users,
     find_missing_integricom_users,
     init_integricom_directory,
     list_integricom_users,
@@ -65,6 +73,11 @@ def invoice_analyzer_app() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/apps/admin")
+def admin_app() -> FileResponse:
+    return FileResponse(STATIC_DIR / "admin.html")
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -91,6 +104,28 @@ def save_adobe_users(payload: list[dict[str, Any]] = Body(...)) -> dict[str, Any
     }
 
 
+@app.get("/api/adobe/users")
+def get_adobe_users(active_only: bool = True) -> dict[str, Any]:
+    users = list_adobe_users(active_only=active_only)
+    serialized = _serialize_directory_users(users)
+    return {
+        "vendor": "adobe",
+        "active_only": active_only,
+        "count": len(serialized),
+        "users": serialized,
+    }
+
+
+@app.post("/api/adobe/users/deactivate")
+def deactivate_adobe_users(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    emails = _parse_email_list(payload, field_name="emails")
+    count = deactivate_adobe_directory_users(emails)
+    return {
+        "requested": len(emails),
+        "deactivated": count,
+    }
+
+
 @app.post("/api/integricom/users/save")
 def save_integricom_users(payload: list[dict[str, Any]] = Body(...)) -> dict[str, Any]:
     parsed = _parse_user_updates(json.dumps(payload), field_name="integricom_user_updates")
@@ -109,6 +144,28 @@ def save_integricom_users(payload: list[dict[str, Any]] = Body(...)) -> dict[str
         "received": len(parsed),
         "saved": len(rows_to_upsert),
         "skipped_blank_branch": len(parsed) - len(rows_to_upsert),
+    }
+
+
+@app.get("/api/integricom/users")
+def get_integricom_users(active_only: bool = True) -> dict[str, Any]:
+    users = list_integricom_users(active_only=active_only)
+    serialized = _serialize_directory_users(users)
+    return {
+        "vendor": "integricom",
+        "active_only": active_only,
+        "count": len(serialized),
+        "users": serialized,
+    }
+
+
+@app.post("/api/integricom/users/deactivate")
+def deactivate_integricom_users(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    emails = _parse_email_list(payload, field_name="emails")
+    count = deactivate_integricom_directory_users(emails)
+    return {
+        "requested": len(emails),
+        "deactivated": count,
     }
 
 
@@ -141,6 +198,22 @@ def _parse_user_updates(raw: str | None, *, field_name: str) -> list[dict[str, s
                 "branch": (item.get("branch") or "").strip(),
             }
         )
+    return parsed
+
+
+def _parse_email_list(payload: dict[str, Any], *, field_name: str) -> list[str]:
+    raw_list = payload.get(field_name)
+    if not isinstance(raw_list, list):
+        raise HTTPException(status_code=400, detail=f"{field_name} must be a JSON array.")
+
+    parsed: list[str] = []
+    for index, value in enumerate(raw_list, start=1):
+        if not isinstance(value, str):
+            raise HTTPException(status_code=400, detail=f"{field_name} item {index} must be a string.")
+        email = value.strip().lower()
+        if not email:
+            raise HTTPException(status_code=400, detail=f"{field_name} item {index} is blank.")
+        parsed.append(email)
     return parsed
 
 
@@ -234,6 +307,24 @@ def _directory_to_profile_map(directory: dict[str, Any]) -> dict[str, dict[str, 
             "last_name": user.last_name,
         }
     return profiles
+
+
+def _serialize_directory_users(directory: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for email, user in sorted(directory.items(), key=lambda item: item[0]):
+        rows.append(
+            {
+                "email": email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "branch": user.branch,
+                "is_active": bool(user.is_active),
+                "created_at": user.created_at,
+                "updated_at": user.updated_at,
+                "last_seen_at": user.last_seen_at,
+            }
+        )
+    return rows
 
 
 def _serialize_missing_adobe_users(current_emails: set[str]) -> list[dict[str, Any]]:

@@ -32,3 +32,29 @@ def test_integricom_directory_upsert_and_missing(tmp_path: Path) -> None:
     missing = integricom_directory.find_missing_integricom_users({"user1@example.com"})
     assert len(missing) == 1
     assert missing[0].email == "user2@example.com"
+
+
+def test_deactivate_integricom_users_marks_user_inactive(tmp_path: Path) -> None:
+    db_path = tmp_path / "integricom_users.sqlite3"
+    integricom_directory.INTEGRICOM_DIRECTORY_DB = db_path
+
+    integricom_directory.init_integricom_directory()
+    integricom_directory.upsert_integricom_users(
+        [
+            {
+                "email": "active@example.com",
+                "first_name": "Active",
+                "last_name": "User",
+                "branch": "Acworth",
+            }
+        ]
+    )
+
+    deactivated = integricom_directory.deactivate_integricom_users(["active@example.com"])
+    assert deactivated == 1
+
+    active_users = integricom_directory.list_integricom_users(active_only=True)
+    all_users = integricom_directory.list_integricom_users()
+
+    assert "active@example.com" not in active_users
+    assert all_users["active@example.com"].is_active is False

@@ -6,6 +6,7 @@ def test_launcher_and_invoice_routes_registered() -> None:
 
     assert "/" in paths
     assert "/apps/invoice-analyzer" in paths
+    assert "/apps/admin" in paths
 
 
 def test_launcher_html_lists_invoice_analyzer() -> None:
@@ -13,3 +14,4 @@ def test_launcher_html_lists_invoice_analyzer() -> None:
 
     assert "CodexPlayground" in html
     assert "Invoice Analyzer" in html
+    assert "Admin" in html
