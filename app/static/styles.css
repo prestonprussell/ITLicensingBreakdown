@@ -82,6 +82,13 @@ p {
   background: linear-gradient(145deg, #eff6ff 0%, #f8fbff 60%, #f7fafc 100%);
 }
 
+.launcher-logo {
+  display: block;
+  width: min(100%, 560px);
+  height: auto;
+  margin: 0 0 8px;
+}
+
 .app-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
