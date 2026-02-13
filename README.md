@@ -56,7 +56,8 @@ docker compose up --build -d
 ```
 
 Open:
-- [http://127.0.0.1:8080](http://127.0.0.1:8080)
+- App launcher: [http://127.0.0.1:8080](http://127.0.0.1:8080)
+- Invoice Analyzer: [http://127.0.0.1:8080/apps/invoice-analyzer](http://127.0.0.1:8080/apps/invoice-analyzer)
 
 Useful commands:
 
@@ -80,7 +81,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 Open:
-- [http://127.0.0.1:8080](http://127.0.0.1:8080)
+- App launcher: [http://127.0.0.1:8080](http://127.0.0.1:8080)
+- Invoice Analyzer: [http://127.0.0.1:8080/apps/invoice-analyzer](http://127.0.0.1:8080/apps/invoice-analyzer)
 
 ## Windows quick start (PowerShell)
 

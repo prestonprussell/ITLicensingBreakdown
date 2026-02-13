@@ -41,8 +41,102 @@ h3 {
   margin-top: 0;
 }
 
+.panel-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.home-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.home-link:hover {
+  text-decoration: underline;
+}
+
+.chip {
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+}
+
 p {
   color: var(--muted);
+}
+
+.launcher-container {
+  max-width: 980px;
+}
+
+.launcher-hero {
+  border-color: #bfdbfe;
+  background: linear-gradient(145deg, #eff6ff 0%, #f8fbff 60%, #f7fafc 100%);
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.app-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.app-card h3 {
+  margin: 0;
+}
+
+.app-card p {
+  margin: 0;
+}
+
+.app-card-live {
+  border-color: #93c5fd;
+  box-shadow: 0 12px 28px rgba(29, 78, 216, 0.11);
+}
+
+.app-card-live:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(29, 78, 216, 0.15);
+}
+
+.app-card-soon {
+  background: #f8fafc;
+  border-style: dashed;
+}
+
+.app-status {
+  width: fit-content;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.app-link {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.9rem;
 }
 
 form {

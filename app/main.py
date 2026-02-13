@@ -56,7 +56,12 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/")
-def root() -> FileResponse:
+def launcher() -> FileResponse:
+    return FileResponse(STATIC_DIR / "launcher.html")
+
+
+@app.get("/apps/invoice-analyzer")
+def invoice_analyzer_app() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
