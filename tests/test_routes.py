@@ -7,6 +7,7 @@ def test_launcher_and_invoice_routes_registered() -> None:
     assert "/" in paths
     assert "/apps/invoice-analyzer" in paths
     assert "/apps/admin" in paths
+    assert "/api/integricom/sync/entra" in paths
 
 
 def test_launcher_html_lists_invoice_analyzer() -> None:

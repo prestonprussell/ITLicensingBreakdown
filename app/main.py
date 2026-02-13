@@ -26,6 +26,7 @@ from .integricom_directory import (
     touch_seen_integricom_users,
     upsert_integricom_users,
 )
+from .entra_graph import EntraSyncError, sync_integricom_users_from_entra
 from .processing import (
     ADOBE_ADJUSTMENT_LICENSE,
     ADOBE_HOME_OFFICE,
@@ -166,6 +167,27 @@ def deactivate_integricom_users(payload: dict[str, Any] = Body(...)) -> dict[str
     return {
         "requested": len(emails),
         "deactivated": count,
+    }
+
+
+@app.post("/api/integricom/sync/entra")
+def sync_integricom_users_from_entra_endpoint() -> dict[str, Any]:
+    try:
+        result = sync_integricom_users_from_entra()
+    except EntraSyncError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    upsert_integricom_users(result.users)
+    touch_seen_integricom_users(result.users)
+
+    return {
+        "synced": len(result.users),
+        "users_scanned": result.users_scanned,
+        "users_with_supported_licenses": result.users_with_supported_licenses,
+        "users_skipped_external": result.users_skipped_external,
+        "users_skipped_unlicensed": result.users_skipped_unlicensed,
+        "unknown_sku_parts": result.unknown_sku_parts,
+        "warnings": result.warnings,
     }
 
 

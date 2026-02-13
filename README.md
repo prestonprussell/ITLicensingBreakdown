@@ -110,6 +110,27 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 - `POST /api/integricom/users/save` (JSON array) to save Integricom user branch edits
 - `GET /api/adobe/users` and `GET /api/integricom/users` to list active directory users for admin tooling
 - `POST /api/adobe/users/deactivate` and `POST /api/integricom/users/deactivate` with `{"emails":[...]}` to deactivate users
+- `POST /api/integricom/sync/entra` to pull Integricom users directly from Microsoft Entra (Graph app-only)
+
+## Microsoft Entra Sync (Integricom)
+
+Set these environment variables where the app runs:
+- `ENTRA_TENANT_ID`
+- `ENTRA_CLIENT_ID`
+- `ENTRA_CLIENT_SECRET`
+
+Docker option:
+- copy `.env.example` to `.env`
+- fill values, then `docker compose up -d --build`
+
+Expected Entra app permissions (Application):
+- `User.Read.All`
+- `LicenseAssignment.Read.All`
+
+Then use Admin app:
+- [http://127.0.0.1:8080/apps/admin](http://127.0.0.1:8080/apps/admin)
+- Choose `Integricom`
+- Click `Sync from Entra`
 
 ## Expected CSV fields
 

@@ -1,6 +1,7 @@
 const vendorSelect = document.getElementById("admin-vendor");
 const searchInput = document.getElementById("admin-search");
 const reloadBtn = document.getElementById("admin-reload-btn");
+const syncEntraBtn = document.getElementById("admin-sync-entra-btn");
 const addBtn = document.getElementById("admin-add-btn");
 const saveBtn = document.getElementById("admin-save-btn");
 const statusText = document.getElementById("admin-status");
@@ -102,12 +103,19 @@ function renderRows() {
   });
 }
 
+function updateVendorActions() {
+  const isIntegricom = vendorSelect.value === "integricom";
+  syncEntraBtn.hidden = !isIntegricom;
+}
+
 async function loadUsers() {
   const vendor = vendorSelect.value;
+  updateVendorActions();
   setStatus(`Loading ${vendor} users...`);
   saveBtn.disabled = true;
   addBtn.disabled = true;
   reloadBtn.disabled = true;
+  syncEntraBtn.disabled = true;
 
   try {
     const response = await fetch(`/api/${vendor}/users?active_only=true`);
@@ -134,6 +142,7 @@ async function loadUsers() {
     saveBtn.disabled = false;
     addBtn.disabled = false;
     reloadBtn.disabled = false;
+    syncEntraBtn.disabled = vendorSelect.value !== "integricom";
   }
 }
 
@@ -248,6 +257,38 @@ async function deactivateRow(row) {
   }
 }
 
+async function syncFromEntra() {
+  if (vendorSelect.value !== "integricom") {
+    setStatus("Entra sync is only available for Integricom directory.", "error");
+    return;
+  }
+
+  if (!window.confirm("Sync Integricom users from Microsoft Entra now?")) {
+    return;
+  }
+
+  setStatus("Syncing from Microsoft Entra...");
+  syncEntraBtn.disabled = true;
+  try {
+    const response = await fetch("/api/integricom/sync/entra", { method: "POST" });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || "Entra sync failed.");
+    }
+    const result = await response.json();
+    const warningSuffix = result.warnings?.length ? ` Warnings: ${result.warnings.join(" | ")}` : "";
+    setStatus(
+      `Entra sync complete. Synced ${result.synced} users from ${result.users_scanned} scanned.${warningSuffix}`,
+      "ok",
+    );
+    await loadUsers();
+  } catch (error) {
+    setStatus(error.message, "error");
+  } finally {
+    syncEntraBtn.disabled = vendorSelect.value !== "integricom";
+  }
+}
+
 function initializeResizableTables() {
   const tables = document.querySelectorAll("table.resizable-table");
   tables.forEach((table) => {
@@ -293,8 +334,10 @@ function initializeResizableTables() {
 vendorSelect.addEventListener("change", loadUsers);
 searchInput.addEventListener("input", renderRows);
 reloadBtn.addEventListener("click", loadUsers);
+syncEntraBtn.addEventListener("click", syncFromEntra);
 addBtn.addEventListener("click", addUserRow);
 saveBtn.addEventListener("click", saveUsers);
 
 initializeResizableTables();
+updateVendorActions();
 loadUsers();

@@ -4,6 +4,10 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: ap-allocation-app
+    environment:
+      ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
+      ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}
+      ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:-}
     ports:
       - "8080:8080"
     volumes:
