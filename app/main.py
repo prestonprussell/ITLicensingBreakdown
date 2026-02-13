@@ -31,6 +31,7 @@ from .processing import (
     ADOBE_ADJUSTMENT_LICENSE,
     ADOBE_HOME_OFFICE,
     HEXNODE_DEFAULT_LICENSE,
+    IntegricomExportUser,
     INTEGRICOM_ADJUSTMENT_LICENSE,
     INTEGRICOM_HOME_OFFICE,
     INTEGRICOM_KNOWN_BRANCHES,
@@ -553,7 +554,8 @@ async def _analyze_integricom(
     if not parsed_invoice.line_items:
         raise HTTPException(status_code=400, detail="Could not parse Integricom invoice line items.")
 
-    export_users = []
+    export_users: list[IntegricomExportUser] = []
+    csv_upload_requested = bool(csv_files)
     for upload in csv_files:
         if not upload.filename:
             continue
@@ -572,6 +574,60 @@ async def _analyze_integricom(
             }
         )
         warnings.extend(parsed_export.warnings)
+
+    if not export_users:
+        try:
+            entra_sync = sync_integricom_users_from_entra()
+        except EntraSyncError as exc:
+            if csv_upload_requested:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "No usable Integricom users were found in uploaded CSVs and Entra fallback failed: "
+                        f"{exc}"
+                    ),
+                ) from exc
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Integricom mode now allows no CSV uploads, but Entra sync is not ready. "
+                    f"{exc}"
+                ),
+            ) from exc
+
+        export_users = [
+            IntegricomExportUser(
+                source_file="entra",
+                email=user.email,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                office=user.office,
+                default_branch=user.default_branch,
+                licenses=user.licenses,
+            )
+            for user in entra_sync.export_users
+        ]
+        if not export_users:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "No supported licensed users were found in Microsoft Entra for Integricom allocation. "
+                    "Upload a CSV or verify Entra license assignments."
+                ),
+            )
+
+        file_summaries.append(
+            {
+                "filename": "Microsoft Entra (Graph)",
+                "rows_ingested": len(export_users),
+                "rows_skipped": entra_sync.users_skipped_external + entra_sync.users_skipped_unlicensed,
+            }
+        )
+        warnings.extend(entra_sync.warnings)
+        if csv_upload_requested:
+            warnings.append("CSV uploads produced no usable Integricom users; used Entra sync fallback.")
+        else:
+            warnings.append("No CSV uploaded; used Microsoft Entra sync for Integricom user licensing.")
 
     init_integricom_directory()
     submitted_updates = _parse_user_updates(integricom_user_updates, field_name="integricom_user_updates")
@@ -838,8 +894,6 @@ async def analyze(
             raise HTTPException(status_code=400, detail="At least one CSV export file is required.")
         return await _analyze_adobe(uploads, invoice_file, adobe_user_updates)
     if vendor == "integricom":
-        if not uploads:
-            raise HTTPException(status_code=400, detail="At least one CSV export file is required.")
         return await _analyze_integricom(
             uploads,
             invoice_file,

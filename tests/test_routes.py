@@ -1,3 +1,10 @@
+import asyncio
+from io import BytesIO
+
+import pytest
+from starlette.datastructures import UploadFile
+
+from app import main as main_module
 from app.main import STATIC_DIR, app
 
 
@@ -16,3 +23,35 @@ def test_launcher_html_lists_invoice_analyzer() -> None:
     assert "CodexPlayground" in html
     assert "Invoice Analyzer" in html
     assert "Admin" in html
+
+
+def test_integricom_mode_allows_missing_csv_upload(monkeypatch) -> None:
+    async def fake_analyze_integricom(_uploads, _invoice_file, _user_updates, _branch_updates):
+        return {"vendor_type": "integricom", "ok": True}
+
+    monkeypatch.setattr(main_module, "_analyze_integricom", fake_analyze_integricom)
+    invoice_file = UploadFile(filename="invoice.pdf", file=BytesIO(b"%PDF-1.4\n"))
+
+    response = asyncio.run(
+        main_module.analyze(
+            vendor_type="integricom",
+            csv_files=None,
+            invoice_file=invoice_file,
+        )
+    )
+
+    assert response["ok"] is True
+
+
+def test_generic_mode_still_requires_csv_upload() -> None:
+    with pytest.raises(main_module.HTTPException) as exc:
+        asyncio.run(
+            main_module.analyze(
+                vendor_type="generic",
+                csv_files=None,
+                invoice_file=None,
+            )
+        )
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "At least one CSV export file is required."

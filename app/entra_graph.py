@@ -47,12 +47,23 @@ class EntraSyncError(RuntimeError):
 @dataclass
 class EntraIntegricomSyncResult:
     users: list[dict[str, str]]
+    export_users: list["EntraIntegricomExportUser"]
     users_scanned: int
     users_skipped_external: int
     users_skipped_unlicensed: int
     users_with_supported_licenses: int
     unknown_sku_parts: list[str]
     warnings: list[str]
+
+
+@dataclass
+class EntraIntegricomExportUser:
+    email: str
+    first_name: str
+    last_name: str
+    office: str
+    default_branch: str
+    licenses: list[str]
 
 
 def _normalize_integricom_branch_from_office(office: str | None) -> str:
@@ -165,6 +176,7 @@ def sync_integricom_users_from_entra() -> EntraIntegricomSyncResult:
     graph_users = _graph_get_paginated(users_url, access_token)
 
     rows_to_upsert: list[dict[str, str]] = []
+    export_users: list[EntraIntegricomExportUser] = []
     users_scanned = 0
     skipped_external = 0
     skipped_unlicensed = 0
@@ -207,13 +219,24 @@ def sync_integricom_users_from_entra() -> EntraIntegricomSyncResult:
 
         supported_users += 1
         office = str(user.get("officeLocation") or "").strip()
+        branch = _normalize_integricom_branch_from_office(office)
         rows_to_upsert.append(
             {
                 "email": email,
                 "first_name": str(user.get("givenName") or "").strip(),
                 "last_name": str(user.get("surname") or "").strip(),
-                "branch": _normalize_integricom_branch_from_office(office),
+                "branch": branch,
             }
+        )
+        export_users.append(
+            EntraIntegricomExportUser(
+                email=email,
+                first_name=str(user.get("givenName") or "").strip(),
+                last_name=str(user.get("surname") or "").strip(),
+                office=office,
+                default_branch=branch,
+                licenses=sorted(canonical_licenses),
+            )
         )
 
     if unknown_sku_parts:
@@ -223,6 +246,7 @@ def sync_integricom_users_from_entra() -> EntraIntegricomSyncResult:
 
     return EntraIntegricomSyncResult(
         users=rows_to_upsert,
+        export_users=export_users,
         users_scanned=users_scanned,
         users_skipped_external=skipped_external,
         users_skipped_unlicensed=skipped_unlicensed,

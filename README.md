@@ -11,7 +11,7 @@ Built as a lightweight FastAPI app so it runs on:
 
 1. Choose vendor mode (`Hexnode`, `Adobe`, `Integricom Licensing`, `Integricom Support Hours`, or `Generic`)
 2. Upload one invoice file (optional for Generic, recommended for Hexnode, required for Adobe, Integricom Licensing, and Integricom Support Hours)
-3. Upload one or more CSV exports from vendors (Microsoft, Adobe, etc.)
+3. Upload one or more CSV exports from vendors (Microsoft, Adobe, etc.) when needed
 4. Auto-detect common columns for branch, license, and amount
 5. Aggregate totals into a pivot-style breakdown
 6. Download `breakdown.csv`
@@ -19,7 +19,7 @@ Built as a lightweight FastAPI app so it runs on:
 Hexnode mode includes:
 - fixed $2/device cost
 - `Default User` usernames mapped to `Home Office`
-- invoice reconciliation (`invoice total - CSV total`) added to `Home Office`
+- invoice reconciliation (`invoice total - source total`) added to `Home Office`
 
 Adobe mode includes:
 - parsing per-license pricing from invoice line items
@@ -38,6 +38,7 @@ Integricom Licensing mode includes:
 - prompt-driven branch assignment for extra branch-tethered quantities (instead of auto-charging Home Office)
 - Dropbox forced to `Home Office` allocation
 - per-user editable branch table with dedicated save button
+- optional no-CSV workflow via Microsoft Entra sync (Admin app)
 
 Integricom Support Hours mode includes:
 - parsing invoice time-detail blocks (`Charge To`) and including only entries where `Bill = Y`
@@ -100,7 +101,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 
 - `POST /api/analyze` (multipart form)
   - `vendor_type`: `hexnode`, `adobe`, `integricom`, `integricom_support`, or `generic` (defaults to `generic`)
-  - `csv_files`: one or more CSV files (required except `integricom_support`)
+  - `csv_files`: one or more CSV files (required for `hexnode`, `adobe`, and `generic`; optional for `integricom`; not used for `integricom_support`)
   - `invoice_file`: invoice file (required for `hexnode`, `adobe`, `integricom`, and `integricom_support`)
   - `adobe_user_updates`: optional JSON array used when Adobe mode prompts for new user details
   - `integricom_user_updates`: optional JSON array used when Integricom mode saves branch edits during analyze
