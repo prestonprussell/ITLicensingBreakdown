@@ -5,14 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodexPlayground Apps</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico?v=2026-02-13-1" />
-    <link rel="stylesheet" href="/static/styles.css?v=2026-02-13-2" />
+    <script>
+      (() => {
+        try {
+          const stored = localStorage.getItem("codexplayground-theme");
+          if (stored === "light" || stored === "dark") {
+            document.documentElement.setAttribute("data-theme", stored);
+          }
+        } catch (_error) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/styles.css?v=2026-02-13-3" />
   </head>
   <body>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light and dark mode">
+      Light Mode
+    </button>
     <main class="container launcher-container">
-      <section class="panel launcher-brand">
+      <section class="launcher-brand">
         <img
           class="launcher-logo"
-          src="/static/codexplayground-logo.png?v=2026-02-13-2"
+          src="/static/codexplayground-logo.png?v=2026-02-13-3"
           alt="CodexPlayground"
         />
       </section>
@@ -41,5 +54,6 @@
         </div>
       </section>
     </main>
+    <script src="/static/theme.js?v=2026-02-13-1" defer></script>
   </body>
 </html>

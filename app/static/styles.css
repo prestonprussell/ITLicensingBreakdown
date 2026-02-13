@@ -8,6 +8,66 @@
   --ok: #7ad7aa;
   --input-bg: #121b2b;
   --table-head: #22304a;
+  --table-bg: #162133;
+  --page-bg: linear-gradient(155deg, #0f1522 0%, #121a2a 45%, #1a2438 100%);
+  --panel-shadow: 0 14px 30px rgba(6, 10, 19, 0.42);
+  --chip-border: #4a5f87;
+  --chip-bg: rgba(71, 96, 141, 0.4);
+  --chip-ink: #d7e3ff;
+  --launcher-hero-border: #3a4f75;
+  --launcher-hero-bg: linear-gradient(145deg, #1e2a41 0%, #1a2438 60%, #172131 100%);
+  --app-card-bg: #1b263b;
+  --app-card-live-border: #4f6f9e;
+  --app-card-live-shadow: 0 12px 28px rgba(4, 9, 17, 0.45);
+  --app-card-live-shadow-hover: 0 18px 34px rgba(4, 9, 17, 0.55);
+  --app-card-soon-bg: #172133;
+  --app-status-border: #526d99;
+  --app-status-bg: rgba(75, 100, 149, 0.35);
+  --app-status-ink: #dbe6ff;
+  --button-ink: #0f172a;
+  --resizer-color: #a6b3c9;
+  --error-color: #fca5a5;
+  --warning-surface-border: #c07f28;
+  --warning-surface-bg: linear-gradient(180deg, #3a2a12 0%, #2f230f 100%);
+  --success-surface-border: #2fa77f;
+  --success-surface-bg: linear-gradient(180deg, #14392f 0%, #102d25 100%);
+  --summary-card-bg: #1d2940;
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --ink: #1f2937;
+  --accent: #0b6bcb;
+  --muted: #6b7280;
+  --line: #d1d5db;
+  --ok: #0b8457;
+  --input-bg: #ffffff;
+  --table-head: #f2f6fa;
+  --table-bg: #ffffff;
+  --page-bg: linear-gradient(160deg, #f5f9ff 0%, #eef2f5 40%, #f8fafc 100%);
+  --panel-shadow: 0 8px 24px rgba(31, 41, 55, 0.06);
+  --chip-border: #bfdbfe;
+  --chip-bg: #eff6ff;
+  --chip-ink: #1d4ed8;
+  --launcher-hero-border: #bfdbfe;
+  --launcher-hero-bg: linear-gradient(145deg, #eff6ff 0%, #f8fbff 60%, #f7fafc 100%);
+  --app-card-bg: #ffffff;
+  --app-card-live-border: #93c5fd;
+  --app-card-live-shadow: 0 12px 28px rgba(29, 78, 216, 0.11);
+  --app-card-live-shadow-hover: 0 16px 32px rgba(29, 78, 216, 0.15);
+  --app-card-soon-bg: #f8fafc;
+  --app-status-border: #bfdbfe;
+  --app-status-bg: #eff6ff;
+  --app-status-ink: #1d4ed8;
+  --button-ink: #ffffff;
+  --resizer-color: #9ca3af;
+  --error-color: #b91c1c;
+  --warning-surface-border: #f59e0b;
+  --warning-surface-bg: linear-gradient(180deg, #fffbeb 0%, #fff7df 100%);
+  --success-surface-border: #10b981;
+  --success-surface-bg: linear-gradient(180deg, #ecfdf5 0%, #e7f9f1 100%);
+  --summary-card-bg: #fbfdff;
 }
 
 * {
@@ -17,7 +77,7 @@
 body {
   margin: 0;
   font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background: linear-gradient(155deg, #0f1522 0%, #121a2a 45%, #1a2438 100%);
+  background: var(--page-bg);
   color: var(--ink);
 }
 
@@ -34,7 +94,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 14px 30px rgba(6, 10, 19, 0.42);
+  box-shadow: var(--panel-shadow);
 }
 
 h1,
@@ -62,9 +122,9 @@ h3 {
 }
 
 .chip {
-  border: 1px solid #4a5f87;
-  color: #d7e3ff;
-  background: rgba(71, 96, 141, 0.4);
+  border: 1px solid var(--chip-border);
+  color: var(--chip-ink);
+  background: var(--chip-bg);
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 700;
@@ -80,16 +140,16 @@ p {
 }
 
 .launcher-brand {
-  border-color: #40597f;
-  background: radial-gradient(80% 130% at 50% 0%, #22324f 0%, #171f31 58%, #141c2b 100%);
+  padding: 4px 0 6px;
+  background: transparent;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .launcher-hero {
-  border-color: #3a4f75;
-  background: linear-gradient(145deg, #1e2a41 0%, #1a2438 60%, #172131 100%);
+  border-color: var(--launcher-hero-border);
+  background: var(--launcher-hero-bg);
 }
 
 .launcher-logo {
@@ -109,7 +169,7 @@ p {
 .app-card {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #1b263b;
+  background: var(--app-card-bg);
   padding: 16px;
   display: grid;
   gap: 10px;
@@ -126,17 +186,17 @@ p {
 }
 
 .app-card-live {
-  border-color: #4f6f9e;
-  box-shadow: 0 12px 28px rgba(4, 9, 17, 0.45);
+  border-color: var(--app-card-live-border);
+  box-shadow: var(--app-card-live-shadow);
 }
 
 .app-card-live:hover {
   transform: translateY(-2px);
-  box-shadow: 0 18px 34px rgba(4, 9, 17, 0.55);
+  box-shadow: var(--app-card-live-shadow-hover);
 }
 
 .app-card-soon {
-  background: #172133;
+  background: var(--app-card-soon-bg);
   border-style: dashed;
 }
 
@@ -146,9 +206,9 @@ p {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
-  border: 1px solid #526d99;
-  background: rgba(75, 100, 149, 0.35);
-  color: #dbe6ff;
+  border: 1px solid var(--app-status-border);
+  background: var(--app-status-bg);
+  color: var(--app-status-ink);
 }
 
 .app-link {
@@ -198,7 +258,7 @@ button {
   border: none;
   border-radius: 8px;
   background: var(--accent);
-  color: #0f172a;
+  color: var(--button-ink);
   padding: 10px 14px;
   font-weight: 700;
   cursor: pointer;
@@ -206,6 +266,19 @@ button {
 
 button:hover {
   filter: brightness(1.05);
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1100;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  box-shadow: var(--panel-shadow);
+  padding: 7px 12px;
 }
 
 .cards {
@@ -219,7 +292,7 @@ button:hover {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
-  background: #1d2940;
+  background: var(--summary-card-bg);
 }
 
 .card .label {
@@ -234,9 +307,9 @@ button:hover {
 }
 
 #branch-assignment-section {
-  border: 1px solid #c07f28;
+  border: 1px solid var(--warning-surface-border);
   border-radius: 10px;
-  background: linear-gradient(180deg, #3a2a12 0%, #2f230f 100%);
+  background: var(--warning-surface-bg);
   padding: 14px;
   margin-bottom: 12px;
 }
@@ -246,9 +319,9 @@ button:hover {
 }
 
 #support-review-section {
-  border: 1px solid #2fa77f;
+  border: 1px solid var(--success-surface-border);
   border-radius: 10px;
-  background: linear-gradient(180deg, #14392f 0%, #102d25 100%);
+  background: var(--success-surface-bg);
   padding: 14px;
   margin-bottom: 12px;
 }
@@ -261,7 +334,7 @@ button:hover {
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #162133;
+  background: var(--table-bg);
 }
 
 table {
@@ -293,7 +366,7 @@ table {
   bottom: 20%;
   right: 4px;
   width: 1px;
-  background: #a6b3c9;
+  background: var(--resizer-color);
   opacity: 0.25;
 }
 
@@ -328,7 +401,7 @@ td {
 .cell-error {
   margin-top: 4px;
   font-size: 0.78rem;
-  color: #fca5a5;
+  color: var(--error-color);
 }
 
 thead {
