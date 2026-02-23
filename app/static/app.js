@@ -1,5 +1,9 @@
 const form = document.getElementById("upload-form");
 const vendorTypeSelect = document.getElementById("vendor-type");
+const invoiceInput = document.getElementById("invoice-file");
+const csvInput = document.getElementById("csv-files");
+const invoiceDropzone = document.getElementById("invoice-dropzone");
+const csvDropzone = document.getElementById("csv-dropzone");
 const resultPanel = document.getElementById("result-panel");
 const summarySection = document.getElementById("summary-section");
 const usersSection = document.getElementById("adobe-users-section");
@@ -99,6 +103,77 @@ function initializeResizableTables() {
 
       headerCell.appendChild(resizer);
     });
+  });
+}
+
+function updateDropzoneLabel(dropzone, input, baseText) {
+  const label = dropzone?.querySelector(".dropzone-text");
+  if (!label || !input) return;
+  if (!input.files || !input.files.length) {
+    label.textContent = baseText;
+    return;
+  }
+  if (input.multiple) {
+    label.textContent = `${input.files.length} file(s) selected`;
+  } else {
+    label.textContent = input.files[0].name;
+  }
+}
+
+function setInputFiles(input, files, { append = false } = {}) {
+  const dataTransfer = new DataTransfer();
+  if (append && input.multiple && input.files?.length) {
+    for (const existingFile of input.files) {
+      dataTransfer.items.add(existingFile);
+    }
+  }
+  for (const file of files) {
+    dataTransfer.items.add(file);
+  }
+  input.files = dataTransfer.files;
+}
+
+function initializeDropzone(dropzone, input, baseText) {
+  if (!dropzone || !input) return;
+
+  updateDropzoneLabel(dropzone, input, baseText);
+  input.addEventListener("change", () => updateDropzoneLabel(dropzone, input, baseText));
+
+  dropzone.addEventListener("click", (event) => {
+    if (event.target === input) return;
+    input.click();
+  });
+
+  const setDragState = (active) => {
+    dropzone.classList.toggle("drag-active", active);
+  };
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      setDragState(true);
+    });
+  });
+
+  ["dragleave", "dragend"].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      setDragState(false);
+    });
+  });
+
+  dropzone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    setDragState(false);
+    const droppedFiles = [...(event.dataTransfer?.files || [])];
+    if (!droppedFiles.length) return;
+
+    if (input.multiple) {
+      setInputFiles(input, droppedFiles, { append: true });
+    } else {
+      setInputFiles(input, [droppedFiles[0]]);
+    }
+    updateDropzoneLabel(dropzone, input, baseText);
   });
 }
 
@@ -335,10 +410,10 @@ form.addEventListener("submit", async (event) => {
 
   const payload = new FormData();
   const vendorType = vendorTypeSelect.value;
-  const invoiceFile = document.getElementById("invoice-file").files[0];
-  const csvFiles = document.getElementById("csv-files").files;
+  const invoiceFile = invoiceInput.files[0];
+  const csvFiles = csvInput.files;
 
-  if (!csvFiles.length && vendorType !== "integricom_support") {
+  if (!csvFiles.length && !["integricom", "integricom_support"].includes(vendorType)) {
     alert("Please add at least one CSV file.");
     return;
   }
@@ -429,7 +504,7 @@ form.addEventListener("submit", async (event) => {
 
     if (data.reconciliation) {
       const base = document.createElement("li");
-      base.textContent = `CSV base total: ${formatMoney(data.reconciliation.base_total)}`;
+      base.textContent = `Source base total: ${formatMoney(data.reconciliation.base_total)}`;
       reconciliationList.appendChild(base);
 
       const inv = document.createElement("li");
@@ -606,4 +681,6 @@ vendorTypeSelect.addEventListener("change", () => {
 });
 
 initializeResizableTables();
+initializeDropzone(invoiceDropzone, invoiceInput, "Drag and drop invoice file here, or click to browse");
+initializeDropzone(csvDropzone, csvInput, "Drag and drop one or more CSV files here, or click to browse");
 refreshAnalyzeButtonLabel();

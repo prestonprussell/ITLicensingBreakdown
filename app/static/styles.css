@@ -39,6 +39,7 @@
   --btn-secondary-ink: #e6edf8;
   --btn-danger-bg: #7f1d1d;
   --btn-danger-ink: #fee2e2;
+  --dropzone-glow: rgba(155, 184, 242, 0.3);
 }
 
 :root[data-theme="light"] {
@@ -82,6 +83,7 @@
   --btn-secondary-ink: #1f2937;
   --btn-danger-bg: #fee2e2;
   --btn-danger-ink: #991b1b;
+  --dropzone-glow: rgba(11, 107, 203, 0.22);
 }
 
 * {
@@ -270,6 +272,29 @@ input[type="file"] {
   padding: 8px;
   background: var(--input-bg);
   color: var(--ink);
+}
+
+.dropzone {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--table-bg);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+  cursor: pointer;
+}
+
+.dropzone.drag-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--dropzone-glow);
+}
+
+.dropzone-text {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+
+.dropzone input[type="file"] {
+  width: 100%;
 }
 
 select {

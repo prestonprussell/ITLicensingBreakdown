@@ -19,7 +19,7 @@
         } catch (_error) {}
       })();
     </script>
-    <link rel="stylesheet" href="/static/styles.css?v=2026-02-13-5" />
+    <link rel="stylesheet" href="/static/styles.css?v=2026-02-13-6" />
   </head>
   <body>
     <main class="container">
@@ -50,12 +50,18 @@
 
           <label>
             Invoice (required for Hexnode, Adobe, Integricom Licensing, and Integricom Support Hours)
-            <input type="file" id="invoice-file" name="invoice_file" />
+            <div class="dropzone" id="invoice-dropzone" data-input-id="invoice-file">
+              <p class="dropzone-text">Drag and drop invoice file here, or click to browse</p>
+              <input type="file" id="invoice-file" name="invoice_file" />
+            </div>
           </label>
 
           <label>
-            License Export CSVs (required except Integricom Support Hours)
-            <input type="file" id="csv-files" name="csv_files" accept=".csv,text/csv" multiple />
+            License Export CSVs (required for Adobe, Hexnode, and Generic; optional for Integricom Licensing; not used for Integricom Support Hours)
+            <div class="dropzone" id="csv-dropzone" data-input-id="csv-files">
+              <p class="dropzone-text">Drag and drop one or more CSV files here, or click to browse</p>
+              <input type="file" id="csv-files" name="csv_files" accept=".csv,text/csv" multiple />
+            </div>
           </label>
 
           <button type="submit" id="analyze-btn">Analyze and Build Breakdown</button>
@@ -186,6 +192,6 @@
     </main>
 
     <script src="/static/theme.js?v=2026-02-13-1" defer></script>
-    <script src="/static/app.js?v=2026-02-13-2" defer></script>
+    <script src="/static/app.js?v=2026-02-13-3" defer></script>
   </body>
 </html>
