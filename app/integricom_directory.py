@@ -26,7 +26,8 @@ def _utc_now() -> str:
 
 def _connect() -> sqlite3.Connection:
     INTEGRICOM_DIRECTORY_DB.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(INTEGRICOM_DIRECTORY_DB)
+    conn = sqlite3.connect(INTEGRICOM_DIRECTORY_DB, timeout=30)
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.row_factory = sqlite3.Row
     return conn
 
