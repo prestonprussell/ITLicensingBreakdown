@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Toolkit TK logo">
+  <rect x="64" y="64" width="896" height="896" rx="224" fill="#B95432"/>
+  <g fill="none" stroke="#FFF8F1" stroke-width="76" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M225 297 H563"/>
+    <path d="M348 297 V719"/>
+    <path d="M512 297 V719"/>
+    <path d="M512 512 L720 307"/>
+    <path d="M512 512 L740 719"/>
+  </g>
+</svg>

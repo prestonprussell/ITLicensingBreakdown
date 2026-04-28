@@ -226,14 +226,10 @@ code,
 .sidebar-mark {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0;
+  border-radius: 7px;
+  display: block;
+  flex: 0 0 28px;
+  object-fit: contain;
 }
 
 .sidebar-nav {
