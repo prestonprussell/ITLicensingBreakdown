@@ -580,7 +580,6 @@ async def _analyze_adobe(
             "invoice_total": float(parsed_invoice.invoice_total),
             "home_office_adjustment": float(adjustment),
         }
-        non_user_rows = _append_integricom_reconciliation_row(non_user_rows, adjustment=adjustment)
 
     breakdown_csv = summary_to_csv(summary)
     grand_total = round(sum(item["total_amount"] for item in summary), 2)
