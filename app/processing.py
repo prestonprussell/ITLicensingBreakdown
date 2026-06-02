@@ -9,6 +9,15 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+# Seed data only — no DB access at import time. Used as the default rule set so
+# the allocation engine stays callable with rules=None (tests, parity checks).
+from .integricom_directory import SEED_INTEGRICOM_RULES
+
+_DEFAULT_RULES: dict[str, dict] = {
+    rule["canonical_name"]: {"rule_type": rule["rule_type"], "params": rule["params"]}
+    for rule in SEED_INTEGRICOM_RULES
+}
+
 
 HEXNODE_DEFAULT_COST = Decimal("2.00")
 HEXNODE_DEFAULT_LICENSE = "Hexnode UEM Cloud Pro Edition"
@@ -1323,30 +1332,13 @@ def parse_integricom_export_csv(filename: str, raw: bytes) -> IntegricomExportPa
     )
 
 
-def _integricom_user_matches_rule(user: IntegricomExportUser, canonical_line: str) -> bool:
-    tokens = set(user.licenses)
-    if canonical_line == "Workstation":
-        return any(
-            token in tokens
-            for token in (
-                INTEGRICOM_LICENSE_BP,
-                INTEGRICOM_LICENSE_P1,
-                INTEGRICOM_LICENSE_P2,
-                INTEGRICOM_LICENSE_F3,
-                INTEGRICOM_LICENSE_TEAMS_ESSENTIALS,
-            )
-        )
-    if canonical_line == "Office 365 Cloud Backup":
-        return INTEGRICOM_LICENSE_BP in tokens or INTEGRICOM_LICENSE_P1 in tokens
-    if canonical_line == "Microsoft Business Premium Annual":
-        return INTEGRICOM_LICENSE_BP in tokens
-    if canonical_line == "Exchange Online P1 Annual":
-        return INTEGRICOM_LICENSE_P1 in tokens
-    if canonical_line == "Microsoft F3 Annual":
-        return INTEGRICOM_LICENSE_F3 in tokens
-    if canonical_line == "Exchange Online P2 Annual":
-        return INTEGRICOM_LICENSE_P2 in tokens
-    return False
+def _integricom_user_matches_rule(user: IntegricomExportUser, match_tokens: list[str]) -> bool:
+    """A user matches a dynamic_user line if they hold any of the rule's license tokens.
+
+    Equivalent to the former per-line OR logic; the token lists now come from
+    the allocation rule's params instead of being hardcoded per canonical name.
+    """
+    return bool(set(user.licenses) & set(match_tokens))
 
 
 def _allocate_integricom_fixed_line(
@@ -1354,10 +1346,12 @@ def _allocate_integricom_fixed_line(
     *,
     line_key: str,
     branch_assignment_updates: dict[tuple[str, int], str],
-) -> tuple[list[dict[str, Any]], list[str], list[dict[str, Any]]]:
+    rule: dict | None = None,
+) -> tuple[list[dict[str, Any]], list[str], list[dict[str, Any]], list[dict[str, Any]]]:
     rows: list[dict[str, Any]] = []
     warnings: list[str] = []
     pending_branch_prompts: list[dict[str, Any]] = []
+    pending_rule_prompts: list[dict[str, Any]] = []
     qty_int = int(line.quantity)
     unit = line.unit_price.quantize(Decimal("0.01"))
     total = line.amount.quantize(Decimal("0.01"))
@@ -1411,7 +1405,11 @@ def _allocate_integricom_fixed_line(
 
         extra_units = max(qty_int - len(branches), 0)
         for prompt_index in range(1, extra_units + 1):
-            submitted_branch = (branch_assignment_updates.get((line_key, prompt_index)) or "").strip()
+            submitted_branch = (
+                branch_assignment_updates.get((line_key, prompt_index))
+                or branch_assignment_updates.get((line.canonical_name, prompt_index))
+                or ""
+            ).strip()
             if not submitted_branch:
                 add_branch_prompt(
                     prompt_index=prompt_index,
@@ -1448,86 +1446,56 @@ def _allocate_integricom_fixed_line(
         if remainder != Decimal("0.00"):
             add_row(INTEGRICOM_HOME_OFFICE, remainder)
 
-    fixed_home_office = {
-        "Ticketing System User License",
-        "Documentation System License",
-        "Monthly Block Hours",
-        "Dark Web Monitoring",
-        "IT Automation Tool",
-        "Teams Rooms Pro",
-        "NetWatch360 MAC",
-        "NetWatch360 Managed Server",
-        "Dropbox Business Standard",
-        "DP Server Image Backup Cloud",
-        "Power BI Pro",
-        "Microsoft Teams Essentials NCE Annual",
-        "M365 Microsoft E5",
-        "M365 Intune",
-        "Prorated M365",
-        "AWS Cloud Server",
-        "Keeper Enterprise Password Manager",
-        "Teams Audio Conferencing",
-    }
+    # Rule-driven dispatch. The branch lists / split amounts that used to be
+    # hardcoded here now arrive as `rule` (loaded from the DB, seeded from the
+    # former literals). Behavior per rule_type is byte-identical to the old chain.
+    rule_type = (rule or {}).get("rule_type")
+    params = (rule or {}).get("params") or {}
 
-    if line.canonical_name in fixed_home_office:
+    if rule_type == "home_office":
         add_row(INTEGRICOM_HOME_OFFICE, total)
-        return rows, warnings, pending_branch_prompts
+        return rows, warnings, pending_branch_prompts, pending_rule_prompts
 
-    if line.canonical_name == "NetWatch360 Managed Firewall":
-        allocate_by_unit_sequence(INTEGRICOM_DISTRICT_BRANCHES)
-        return rows, warnings, pending_branch_prompts
+    if rule_type == "single_branch":
+        add_row(params.get("branch") or INTEGRICOM_HOME_OFFICE, total)
+        return rows, warnings, pending_branch_prompts, pending_rule_prompts
 
-    if line.canonical_name == "NetWatch360 Managed Network Device":
-        add_row(INTEGRICOM_HOME_OFFICE, total)
-        return rows, warnings, pending_branch_prompts
+    if rule_type == "unit_sequence":
+        allocate_by_unit_sequence(list(params.get("branches") or []))
+        return rows, warnings, pending_branch_prompts, pending_rule_prompts
 
-    if line.canonical_name == "NetWatch360 Managed Internet":
-        allocate_by_unit_sequence(INTEGRICOM_MANAGED_INTERNET_BRANCHES)
-        return rows, warnings, pending_branch_prompts
-
-    if line.canonical_name == "Firewall Security Subscription Main Office":
-        sugar_hill_amount = Decimal("97.00")
-        if total >= sugar_hill_amount:
-            add_row("Sugar Hill", sugar_hill_amount)
-            add_row(INTEGRICOM_HOME_OFFICE, total - sugar_hill_amount)
+    if rule_type == "split":
+        split_branch = params.get("branch") or "Sugar Hill"
+        split_amount = Decimal(str(params.get("amount", "0")))
+        if total >= split_amount:
+            add_row(split_branch, split_amount)
+            add_row(INTEGRICOM_HOME_OFFICE, total - split_amount)
         else:
             add_row(INTEGRICOM_HOME_OFFICE, total)
             warnings.append(
                 f"{line.canonical_name}: invoice amount was below expected split baseline; allocated entirely to Home Office."
             )
-        return rows, warnings, pending_branch_prompts
+        return rows, warnings, pending_branch_prompts, pending_rule_prompts
 
-    if line.canonical_name == "Firewall Security Subscription District Office":
-        allocate_by_unit_sequence(
-            [
-                "Canton",
-                "Cobb",
-                "Doraville",
-                "Destin",
-                "Fort Walton",
-                "Tampa",
-                "Savannah",
-                "Charleston",
-                "Nashville",
-                "Color Burst",
-                "Acworth",
-            ]
-        )
-        return rows, warnings, pending_branch_prompts
-
-    if line.canonical_name == "Firewall Security Subscription Latest 2025":
-        add_row("St. Pete", total)
-        return rows, warnings, pending_branch_prompts
-
-    if line.canonical_name == "Project Plan 3":
-        add_row("Sugar Hill", total)
-        return rows, warnings, pending_branch_prompts
-
+    # Unknown line (no rule configured). Preserve the legacy Home-Office + warning
+    # allocation so output is unchanged, AND emit a rule prompt so the analyze
+    # flow can offer to learn a rule for next time.
     add_row(INTEGRICOM_HOME_OFFICE, total)
     warnings.append(
         f"{line.canonical_name}: no Integricom allocation rule configured; amount allocated to Home Office."
     )
-    return rows, warnings, pending_branch_prompts
+    pending_rule_prompts.append(
+        {
+            "line_key": line_key,
+            "canonical_name": line.canonical_name,
+            "unit_price": float(unit),
+            "quantity": qty_int,
+            "amount": float(total),
+            "available_branches": list(INTEGRICOM_KNOWN_BRANCHES),
+            "suggested_rule_type": "home_office",
+        }
+    )
+    return rows, warnings, pending_branch_prompts, pending_rule_prompts
 
 
 def build_integricom_user_allocations(
@@ -1535,12 +1503,19 @@ def build_integricom_user_allocations(
     user_directory: dict[str, dict[str, str]],
     invoice_lines: list[IntegricomInvoiceLine],
     branch_item_updates: list[dict[str, Any]] | None = None,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[str], list[str], list[dict[str, Any]]]:
+    rules: dict[str, dict] | None = None,
+) -> tuple[
+    list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]],
+    list[str], list[str], list[dict[str, Any]], list[dict[str, Any]],
+]:
+    if rules is None:
+        rules = _DEFAULT_RULES
     line_rows: list[dict[str, Any]] = []
     non_user_rows_raw: list[dict[str, Any]] = []
     warnings: list[str] = []
     unresolved_emails: list[str] = []
     unresolved_branch_prompts: list[dict[str, Any]] = []
+    unresolved_rule_prompts: list[dict[str, Any]] = []
     user_rows_map: dict[str, dict[str, Any]] = {}
     branch_assignment_updates_map: dict[tuple[str, int], str] = {}
 
@@ -1583,18 +1558,14 @@ def build_integricom_user_allocations(
             unresolved_emails.append(email)
 
     dynamic_licenses = {
-        "Workstation",
-        "Office 365 Cloud Backup",
-        "Microsoft Business Premium Annual",
-        "Exchange Online P1 Annual",
-        "Microsoft F3 Annual",
-        "Exchange Online P2 Annual",
+        name for name, r in rules.items() if r.get("rule_type") == "dynamic_user"
     }
 
     for line_index, line in enumerate(invoice_lines, start=1):
         line_key = f"{line_index}:{line.canonical_name}"
         if line.canonical_name in dynamic_licenses:
-            matched_users = [user for user in users if _integricom_user_matches_rule(user, line.canonical_name)]
+            match_tokens = (rules[line.canonical_name].get("params") or {}).get("match_tokens") or []
+            matched_users = [user for user in users if _integricom_user_matches_rule(user, match_tokens)]
             matched_count = len(matched_users)
             for user in matched_users:
                 entry = user_rows_map.get(user.email)
@@ -1637,10 +1608,11 @@ def build_integricom_user_allocations(
                 )
             continue
 
-        fixed_rows, fixed_warnings, pending_branch_rows = _allocate_integricom_fixed_line(
+        fixed_rows, fixed_warnings, pending_branch_rows, pending_rule_rows = _allocate_integricom_fixed_line(
             line,
             line_key=line_key,
             branch_assignment_updates=branch_assignment_updates_map,
+            rule=rules.get(line.canonical_name),
         )
         line_rows.extend(fixed_rows)
         non_user_rows_raw.extend(
@@ -1654,6 +1626,7 @@ def build_integricom_user_allocations(
         )
         warnings.extend(fixed_warnings)
         unresolved_branch_prompts.extend(pending_branch_rows)
+        unresolved_rule_prompts.extend(pending_rule_rows)
 
     grouped_non_user: dict[tuple[str, str, str], Decimal] = defaultdict(lambda: Decimal("0"))
     for row in non_user_rows_raw:
@@ -1685,7 +1658,7 @@ def build_integricom_user_allocations(
             }
         )
 
-    return line_rows, user_rows, non_user_rows, warnings, unresolved_emails, unresolved_branch_prompts
+    return line_rows, user_rows, non_user_rows, warnings, unresolved_emails, unresolved_branch_prompts, unresolved_rule_prompts
 
 
 def apply_home_office_adjustment(

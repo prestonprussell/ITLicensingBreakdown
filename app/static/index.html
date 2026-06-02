@@ -145,6 +145,28 @@
             <datalist id="integricom-branch-options"></datalist>
           </div>
 
+          <div id="rule-assignment-section" hidden>
+            <h3>New invoice lines need an allocation rule</h3>
+            <p>
+              These lines have no saved rule yet. Choose where each should go — your choice is saved and applied
+              automatically on every future upload. (Richer rules like splits live in the Admin app.)
+            </p>
+            <div class="table-wrap">
+              <table class="resizable-table">
+                <thead>
+                  <tr>
+                    <th>Invoice Line</th>
+                    <th>Amount</th>
+                    <th>Allocate To</th>
+                    <th>Branch</th>
+                  </tr>
+                </thead>
+                <tbody id="rule-assignment-body"></tbody>
+              </table>
+            </div>
+            <datalist id="rule-branch-options"></datalist>
+          </div>
+
           <div id="support-review-section" hidden>
             <h3>Support billable blocks (Bill = Y)</h3>
             <p>
@@ -248,6 +270,6 @@
     </div>
 
     <script src="/static/theme.js?v=2026-04-28-1" defer></script>
-    <script src="/static/app.js?v=2026-04-28-1" defer></script>
+    <script src="/static/app.js?v=2026-06-02-1" defer></script>
   </body>
 </html>
