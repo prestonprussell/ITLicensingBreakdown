@@ -14,6 +14,9 @@ const summarySection = document.getElementById("summary-section");
 const usersSection = document.getElementById("adobe-users-section");
 const nonUserSection = document.getElementById("non-user-section");
 const branchAssignmentSection = document.getElementById("branch-assignment-section");
+const ruleAssignmentSection = document.getElementById("rule-assignment-section");
+const ruleAssignmentBody = document.getElementById("rule-assignment-body");
+const ruleBranchOptions = document.getElementById("rule-branch-options");
 const supportReviewSection = document.getElementById("support-review-section");
 const usersSectionTitle = document.getElementById("users-section-title");
 const usersSectionHelp = document.getElementById("users-section-help");
@@ -38,6 +41,7 @@ let latestInvoiceFilename = "";
 let currentUserRows = [];
 let currentUserVendor = "";
 let currentBranchAssignmentPrompts = [];
+let currentRulePrompts = [];
 let currentSupportRows = [];
 let currentNonUserRows = [];
 let currentSummaryRows = [];
@@ -59,6 +63,10 @@ function refreshAnalyzeButtonLabel() {
   const vendor = vendorTypeSelect.value;
   if (vendor === "integricom_support" && currentSupportRows.length) {
     analyzeBtn.textContent = "Apply Support Branch Review and Recalculate";
+    return;
+  }
+  if (vendor === "integricom" && currentRulePrompts.length) {
+    analyzeBtn.textContent = "Apply Allocation Rules and Recalculate";
     return;
   }
   if (vendor === "integricom" && currentBranchAssignmentPrompts.length) {
@@ -114,6 +122,7 @@ function setVendorType(nextVendor) {
   currentUserRows = [];
   currentUserVendor = "";
   currentBranchAssignmentPrompts = [];
+  currentRulePrompts = [];
   currentSupportRows = [];
   updateUploadSections(nextVendor);
   refreshAnalyzeButtonLabel();
@@ -312,6 +321,8 @@ function clearResults() {
   nonUserBody.innerHTML = "";
   branchAssignmentBody.innerHTML = "";
   integricomBranchOptions.innerHTML = "";
+  ruleAssignmentBody.innerHTML = "";
+  ruleBranchOptions.innerHTML = "";
   supportReviewBody.innerHTML = "";
   supportBranchOptions.innerHTML = "";
   warningsList.innerHTML = "";
@@ -327,10 +338,12 @@ function clearResults() {
   usersSection.hidden = true;
   nonUserSection.hidden = true;
   branchAssignmentSection.hidden = true;
+  ruleAssignmentSection.hidden = true;
   supportReviewSection.hidden = true;
   saveBranchesBtn.disabled = false;
   saveBranchesBtn.textContent = "Save Branch Changes";
   currentBranchAssignmentPrompts = [];
+  currentRulePrompts = [];
   currentSupportRows = [];
   currentNonUserRows = [];
   currentSummaryRows = [];
@@ -463,6 +476,62 @@ function renderBranchAssignmentPrompts(prompts) {
       </td>
     `;
     branchAssignmentBody.appendChild(tr);
+  });
+}
+
+function renderRulePrompts(prompts) {
+  ruleAssignmentBody.innerHTML = "";
+  ruleBranchOptions.innerHTML = "";
+  currentRulePrompts = prompts || [];
+
+  const optionSet = new Set();
+  currentRulePrompts.forEach((prompt) => {
+    (prompt.available_branches || []).forEach((branch) => optionSet.add(branch));
+  });
+  [...optionSet].sort().forEach((branch) => {
+    const option = document.createElement("option");
+    option.value = branch;
+    ruleBranchOptions.appendChild(option);
+  });
+
+  currentRulePrompts.forEach((prompt, idx) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${prompt.canonical_name || ""}</td>
+      <td>${formatMoney(prompt.amount || 0)}</td>
+      <td>
+        <select id="rule-target-${idx}">
+          <option value="home_office">Home Office</option>
+          <option value="single_branch">A specific branch</option>
+        </select>
+      </td>
+      <td>
+        <input
+          type="text"
+          id="rule-branch-${idx}"
+          list="rule-branch-options"
+          placeholder="Branch (if specific)"
+          disabled
+        />
+      </td>
+    `;
+    ruleAssignmentBody.appendChild(tr);
+
+    const targetSelect = tr.querySelector(`#rule-target-${idx}`);
+    const branchInput = tr.querySelector(`#rule-branch-${idx}`);
+    targetSelect.addEventListener("change", () => {
+      branchInput.disabled = targetSelect.value !== "single_branch";
+      if (branchInput.disabled) branchInput.value = "";
+    });
+  });
+}
+
+function collectRuleUpdates() {
+  return currentRulePrompts.map((prompt, idx) => {
+    const ruleType = document.getElementById(`rule-target-${idx}`)?.value || "home_office";
+    const branch = (document.getElementById(`rule-branch-${idx}`)?.value || "").trim();
+    const params = ruleType === "single_branch" ? { branch } : {};
+    return { canonical_name: prompt.canonical_name, rule_type: ruleType, params };
   });
 }
 
@@ -656,6 +725,8 @@ form.addEventListener("submit", async (event) => {
     (vendorType === "adobe" || vendorType === "integricom") && currentUserRows.length ? collectUserUpdates() : [];
   const pendingBranchAssignmentUpdates =
     vendorType === "integricom" && currentBranchAssignmentPrompts.length ? collectBranchAssignmentUpdates() : [];
+  const pendingRuleUpdates =
+    vendorType === "integricom" && currentRulePrompts.length ? collectRuleUpdates() : [];
   const pendingSupportUpdates =
     vendorType === "integricom_support" && currentSupportRows.length ? collectSupportUpdates() : [];
 
@@ -680,6 +751,9 @@ form.addEventListener("submit", async (event) => {
     }
     if (vendorType === "integricom" && pendingBranchAssignmentUpdates.length) {
       payload.append("integricom_branch_item_updates", JSON.stringify(pendingBranchAssignmentUpdates));
+    }
+    if (vendorType === "integricom" && pendingRuleUpdates.length) {
+      payload.append("integricom_rule_updates", JSON.stringify(pendingRuleUpdates));
     }
     if (vendorType === "integricom_support" && pendingSupportUpdates.length) {
       payload.append("integricom_support_updates", JSON.stringify(pendingSupportUpdates));
@@ -754,9 +828,11 @@ form.addEventListener("submit", async (event) => {
       renderUserTable([]);
       renderNonUserTable([]);
       renderBranchAssignmentPrompts([]);
+      renderRulePrompts([]);
       usersSection.hidden = true;
       nonUserSection.hidden = true;
       branchAssignmentSection.hidden = true;
+      ruleAssignmentSection.hidden = true;
 
       const supportRows = data.support_rows || data.integricom_support_rows || [];
       renderSupportReviewTable(supportRows, data.support_branch_options || []);
@@ -783,17 +859,22 @@ form.addEventListener("submit", async (event) => {
       if (data.vendor_type === "integricom") {
         const nonUserRows = data.non_user_rows || data.integricom_non_user_rows || [];
         const branchPrompts = data.non_user_branch_prompts || data.integricom_non_user_branch_prompts || [];
+        const rulePrompts = data.rule_prompts || data.integricom_rule_prompts || [];
         renderNonUserTable(nonUserRows);
         renderBranchAssignmentPrompts(branchPrompts);
+        renderRulePrompts(rulePrompts);
         nonUserSection.hidden = false;
         branchAssignmentSection.hidden = !branchPrompts.length;
+        ruleAssignmentSection.hidden = !rulePrompts.length;
         renderSummaryTable(data.summary || []);
         summarySection.hidden = false;
       } else {
         renderNonUserTable([]);
         renderBranchAssignmentPrompts([]);
+        renderRulePrompts([]);
         nonUserSection.hidden = true;
         branchAssignmentSection.hidden = true;
+        ruleAssignmentSection.hidden = true;
         renderSummaryTable(data.summary || []);
         summarySection.hidden = false;
       }
@@ -810,17 +891,26 @@ form.addEventListener("submit", async (event) => {
           "Some branch-tethered non-user charges need branch assignments before the breakdown can be finalized.";
         warningsList.prepend(li);
       }
+      if (data.needs_rule_assignment) {
+        const li = document.createElement("li");
+        li.textContent =
+          data.message ||
+          "Some invoice lines have no allocation rule yet. Choose where each should go, then analyze again.";
+        warningsList.prepend(li);
+      }
     } else {
       currentUserRows = [];
       currentUserVendor = "";
       renderSupportReviewTable([], []);
       renderBranchAssignmentPrompts([]);
+      renderRulePrompts([]);
       renderSummaryTable(data.summary || []);
       renderNonUserTable([]);
       summarySection.hidden = false;
       usersSection.hidden = true;
       nonUserSection.hidden = true;
       branchAssignmentSection.hidden = true;
+      ruleAssignmentSection.hidden = true;
       supportReviewSection.hidden = true;
     }
 

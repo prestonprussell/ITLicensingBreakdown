@@ -8,9 +8,29 @@ const addBtn = document.getElementById("admin-add-btn");
 const saveBtn = document.getElementById("admin-save-btn");
 const statusText = document.getElementById("admin-status");
 const usersBody = document.getElementById("admin-users-body");
+const addRuleBtn = document.getElementById("admin-add-rule-btn");
+const usersSection = document.getElementById("admin-users-section");
+const rulesSection = document.getElementById("admin-rules-section");
+const rulesBody = document.getElementById("admin-rules-body");
 
 let userRows = [];
 let nextRowId = 1;
+
+let ruleRows = [];
+let availableBranches = [];
+let availableRuleTypes = ["home_office", "single_branch", "unit_sequence", "split", "dynamic_user"];
+
+const RULE_TYPE_LABELS = {
+  home_office: "All to Home Office",
+  single_branch: "All to one branch",
+  unit_sequence: "One unit per branch (ordered)",
+  split: "Fixed amount to a branch, remainder Home Office",
+  dynamic_user: "Per matched user (by license)",
+};
+
+function isRulesMode() {
+  return vendorSelect.value === "integricom-rules";
+}
 
 function setStatus(message, type = "info") {
   statusText.textContent = message;
@@ -106,10 +126,261 @@ function renderRows() {
 }
 
 function updateVendorActions() {
+  const rulesMode = isRulesMode();
   const isIntegricom = vendorSelect.value === "integricom";
   const isAdobe = vendorSelect.value === "adobe";
-  syncEntraBtn.hidden = !isIntegricom;
-  importBtn.hidden = !isAdobe;
+  syncEntraBtn.hidden = rulesMode || !isIntegricom;
+  importBtn.hidden = rulesMode || !isAdobe;
+  addBtn.hidden = rulesMode;
+  addRuleBtn.hidden = !rulesMode;
+  if (usersSection) usersSection.hidden = rulesMode;
+  if (rulesSection) rulesSection.hidden = !rulesMode;
+}
+
+// --- Rules mode -----------------------------------------------------------
+
+function renderRuleParamsCell(row) {
+  const type = row.rule_type;
+  const branchOptions = (selected) =>
+    availableBranches
+      .map((b) => `<option value="${escapeHtml(b)}" ${b === selected ? "selected" : ""}>${escapeHtml(b)}</option>`)
+      .join("");
+
+  if (type === "home_office") {
+    return '<span class="muted-line">All to Home Office</span>';
+  }
+  if (type === "single_branch") {
+    return `<select id="rule-branch-${row._id}"><option value="">Choose branch…</option>${branchOptions(row.params.branch)}</select>`;
+  }
+  if (type === "split") {
+    return `
+      <select id="rule-branch-${row._id}"><option value="">Choose branch…</option>${branchOptions(row.params.branch)}</select>
+      <input type="text" id="rule-amount-${row._id}" value="${escapeHtml(row.params.amount || "")}" placeholder="Amount (e.g. 97.00)" style="max-width:120px" />`;
+  }
+  if (type === "unit_sequence") {
+    const branches = Array.isArray(row.params.branches) ? row.params.branches.join(", ") : "";
+    return `<input type="text" id="rule-branches-${row._id}" value="${escapeHtml(branches)}" placeholder="Ordered branches, comma-separated" />`;
+  }
+  if (type === "dynamic_user") {
+    const tokens = Array.isArray(row.params.match_tokens) ? row.params.match_tokens.join(", ") : "";
+    return `<input type="text" id="rule-tokens-${row._id}" value="${escapeHtml(tokens)}" placeholder="License tokens, comma-separated" />`;
+  }
+  return "";
+}
+
+function wireRuleParamsInputs(row) {
+  const branchSel = document.getElementById(`rule-branch-${row._id}`);
+  if (branchSel) branchSel.addEventListener("change", (e) => { row.params.branch = e.target.value; });
+  const amountInput = document.getElementById(`rule-amount-${row._id}`);
+  if (amountInput) amountInput.addEventListener("input", (e) => { row.params.amount = e.target.value; });
+  const branchesInput = document.getElementById(`rule-branches-${row._id}`);
+  if (branchesInput) branchesInput.addEventListener("input", (e) => {
+    row.params.branches = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
+  });
+  const tokensInput = document.getElementById(`rule-tokens-${row._id}`);
+  if (tokensInput) tokensInput.addEventListener("input", (e) => {
+    row.params.match_tokens = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
+  });
+}
+
+function applyRuleFilter(rows) {
+  const query = searchInput.value.trim().toLowerCase();
+  if (!query) return rows;
+  return rows.filter((row) => (row.canonical_name || "").toLowerCase().includes(query));
+}
+
+function renderRuleRows() {
+  rulesBody.innerHTML = "";
+  const visible = applyRuleFilter(ruleRows);
+  if (!visible.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = '<td colspan="5">No rules match your current filter.</td>';
+    rulesBody.appendChild(tr);
+    return;
+  }
+
+  visible.forEach((row) => {
+    const tr = document.createElement("tr");
+    const nameCell = row.is_new
+      ? `<input type="text" id="rule-name-${row._id}" value="${escapeHtml(row.canonical_name)}" placeholder="Exact invoice line name" />`
+      : `${escapeHtml(row.canonical_name)}`;
+    const typeOptions = availableRuleTypes
+      .map((t) => `<option value="${t}" ${t === row.rule_type ? "selected" : ""}>${escapeHtml(RULE_TYPE_LABELS[t] || t)}</option>`)
+      .join("");
+
+    tr.innerHTML = `
+      <td>${nameCell}</td>
+      <td><select id="rule-type-${row._id}">${typeOptions}</select></td>
+      <td id="rule-params-${row._id}">${renderRuleParamsCell(row)}</td>
+      <td><span class="muted-line">${escapeHtml(row.source || "")}</span></td>
+      <td><button id="rule-del-${row._id}" type="button" class="${row.is_new ? "btn-secondary" : "btn-danger"}">${row.is_new ? "Remove" : "Delete"}</button></td>
+    `;
+    rulesBody.appendChild(tr);
+
+    if (row.is_new) {
+      document.getElementById(`rule-name-${row._id}`).addEventListener("input", (e) => { row.canonical_name = e.target.value; });
+    }
+    document.getElementById(`rule-type-${row._id}`).addEventListener("change", (e) => {
+      row.rule_type = e.target.value;
+      row.params = {};
+      const cell = document.getElementById(`rule-params-${row._id}`);
+      cell.innerHTML = renderRuleParamsCell(row);
+      wireRuleParamsInputs(row);
+    });
+    wireRuleParamsInputs(row);
+    document.getElementById(`rule-del-${row._id}`).addEventListener("click", async () => {
+      if (row.is_new) {
+        ruleRows = ruleRows.filter((item) => item._id !== row._id);
+        renderRuleRows();
+        return;
+      }
+      await deleteRuleRow(row);
+    });
+  });
+}
+
+async function loadRules() {
+  updateVendorActions();
+  setStatus("Loading Integricom allocation rules...");
+  saveBtn.disabled = true;
+  addRuleBtn.disabled = true;
+  reloadBtn.disabled = true;
+  try {
+    const response = await fetch("/api/integricom/allocation-rules");
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || "Failed to load rules.");
+    }
+    const data = await response.json();
+    availableBranches = data.branches || [];
+    availableRuleTypes = data.rule_types || availableRuleTypes;
+    ruleRows = (data.rules || []).map((r) => ({
+      _id: nextRowId++,
+      is_new: false,
+      canonical_name: r.canonical_name,
+      rule_type: r.rule_type,
+      params: r.params || {},
+      source: r.source || "",
+    }));
+    renderRuleRows();
+    setStatus(`Loaded ${ruleRows.length} allocation rules.`, "ok");
+  } catch (error) {
+    setStatus(error.message, "error");
+  } finally {
+    saveBtn.disabled = false;
+    addRuleBtn.disabled = false;
+    reloadBtn.disabled = false;
+  }
+}
+
+function addRuleRow() {
+  ruleRows.unshift({
+    _id: nextRowId++,
+    is_new: true,
+    canonical_name: "",
+    rule_type: "home_office",
+    params: {},
+    source: "admin",
+  });
+  renderRuleRows();
+}
+
+function collectValidatedRules() {
+  const clean = [];
+  const seen = new Set();
+  for (const row of ruleRows) {
+    const name = (row.canonical_name || "").trim();
+    if (!name) throw new Error("Every rule needs an invoice line name.");
+    if (seen.has(name)) throw new Error(`Duplicate rule for: ${name}`);
+    seen.add(name);
+    const type = row.rule_type;
+    const params = {};
+    if (type === "single_branch") {
+      if (!row.params.branch) throw new Error(`Choose a branch for ${name}.`);
+      params.branch = row.params.branch;
+    } else if (type === "split") {
+      if (!row.params.branch) throw new Error(`Choose a split branch for ${name}.`);
+      if (!row.params.amount) throw new Error(`Enter a split amount for ${name}.`);
+      params.branch = row.params.branch;
+      params.amount = row.params.amount;
+    } else if (type === "unit_sequence") {
+      if (!row.params.branches || !row.params.branches.length) throw new Error(`Add at least one branch for ${name}.`);
+      params.branches = row.params.branches;
+    } else if (type === "dynamic_user") {
+      if (!row.params.match_tokens || !row.params.match_tokens.length) throw new Error(`Add at least one license token for ${name}.`);
+      params.match_tokens = row.params.match_tokens;
+    }
+    clean.push({ canonical_name: name, rule_type: type, params });
+  }
+  return clean;
+}
+
+async function saveRules() {
+  let payload = [];
+  try {
+    payload = collectValidatedRules();
+  } catch (error) {
+    setStatus(error.message, "error");
+    return;
+  }
+  setStatus(`Saving ${payload.length} allocation rules...`);
+  saveBtn.disabled = true;
+  try {
+    const response = await fetch("/api/integricom/allocation-rules/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "Failed to save rules.");
+    setStatus(`Saved ${result.saved} allocation rules.`, "ok");
+    await loadRules();
+  } catch (error) {
+    setStatus(error.message, "error");
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+async function deleteRuleRow(row) {
+  if (!window.confirm(`Delete the rule for "${row.canonical_name}"? This line will prompt for a rule again on the next upload.`)) {
+    return;
+  }
+  setStatus(`Deleting rule for ${row.canonical_name}...`);
+  try {
+    const response = await fetch("/api/integricom/allocation-rules/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ canonical_names: [row.canonical_name] }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "Failed to delete rule.");
+    ruleRows = ruleRows.filter((item) => item._id !== row._id);
+    renderRuleRows();
+    setStatus(`Deleted rule for ${row.canonical_name}.`, "ok");
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
+}
+
+function onVendorChange() {
+  if (isRulesMode()) {
+    loadRules();
+  } else {
+    loadUsers();
+  }
+}
+
+function onReload() {
+  isRulesMode() ? loadRules() : loadUsers();
+}
+
+function onSearch() {
+  isRulesMode() ? renderRuleRows() : renderRows();
+}
+
+function onSave() {
+  isRulesMode() ? saveRules() : saveUsers();
 }
 
 async function loadUsers() {
@@ -373,14 +644,15 @@ function initializeResizableTables() {
   });
 }
 
-vendorSelect.addEventListener("change", loadUsers);
-searchInput.addEventListener("input", renderRows);
-reloadBtn.addEventListener("click", loadUsers);
+vendorSelect.addEventListener("change", onVendorChange);
+searchInput.addEventListener("input", onSearch);
+reloadBtn.addEventListener("click", onReload);
 syncEntraBtn.addEventListener("click", syncFromEntra);
 importBtn.addEventListener("click", () => importFileInput.click());
 importFileInput.addEventListener("change", importAdobeStartingList);
 addBtn.addEventListener("click", addUserRow);
-saveBtn.addEventListener("click", saveUsers);
+addRuleBtn.addEventListener("click", addRuleRow);
+saveBtn.addEventListener("click", onSave);
 
 initializeResizableTables();
 updateVendorActions();

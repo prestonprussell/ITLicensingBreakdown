@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -19,11 +19,18 @@ from .adobe_directory import (
     upsert_adobe_users,
 )
 from .integricom_directory import (
+    VALID_RULE_TYPES as INTEGRICOM_VALID_RULE_TYPES,
     deactivate_integricom_users as deactivate_integricom_directory_users,
+    delete_allocation_rules,
     find_missing_integricom_users,
     init_integricom_directory,
+    list_allocation_rules,
     list_integricom_users,
+    load_allocation_rules,
+    load_branch_item_assignments,
+    save_branch_item_assignments,
     touch_seen_integricom_users,
+    upsert_allocation_rules,
     upsert_integricom_users,
 )
 from .entra_graph import EntraSyncError, sync_integricom_users_from_entra
@@ -249,6 +256,39 @@ def deactivate_integricom_users(payload: dict[str, Any] = Body(...)) -> dict[str
     }
 
 
+@app.get("/api/integricom/allocation-rules")
+def get_integricom_allocation_rules() -> dict[str, Any]:
+    rules = list_allocation_rules()
+    return {
+        "vendor": "integricom",
+        "count": len(rules),
+        "rules": rules,
+        "branches": list(INTEGRICOM_KNOWN_BRANCHES),
+        "rule_types": sorted(INTEGRICOM_VALID_RULE_TYPES),
+    }
+
+
+@app.post("/api/integricom/allocation-rules/save")
+def save_integricom_allocation_rules(payload: list[dict[str, Any]] = Body(...)) -> dict[str, Any]:
+    if not isinstance(payload, list):
+        raise HTTPException(status_code=400, detail="Allocation rules payload must be a JSON array.")
+    cleaned = [
+        _validate_integricom_rule(item.get("canonical_name"), (item.get("rule_type") or "").strip(), item.get("params") or {})
+        for item in payload
+    ]
+    saved = upsert_allocation_rules(cleaned, source="admin")
+    return {"received": len(payload), "saved": saved}
+
+
+@app.post("/api/integricom/allocation-rules/delete")
+def delete_integricom_allocation_rules(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    names = payload.get("canonical_names")
+    if not isinstance(names, list):
+        raise HTTPException(status_code=400, detail="Expected {'canonical_names': [...]}.")
+    count = delete_allocation_rules([str(n) for n in names])
+    return {"requested": len(names), "deleted": count}
+
+
 @app.post("/api/integricom/sync/entra")
 def sync_integricom_users_from_entra_endpoint() -> dict[str, Any]:
     try:
@@ -363,6 +403,76 @@ def _parse_integricom_branch_item_updates(raw: str | None) -> list[dict[str, Any
                 "branch": (item.get("branch") or "").strip(),
             }
         )
+    return parsed
+
+
+def _validate_integricom_rule(canonical_name: str, rule_type: str, params: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize a single allocation rule. Used by both the
+    learn-at-upload flow (restricted types) and the Admin save flow (all types)."""
+    name = (canonical_name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Allocation rule is missing canonical_name.")
+    if rule_type not in INTEGRICOM_VALID_RULE_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unknown rule_type '{rule_type}' for '{name}'.")
+    params = params or {}
+    clean: dict[str, Any] = {}
+    if rule_type == "home_office":
+        clean = {}
+    elif rule_type == "single_branch":
+        branch = (params.get("branch") or "").strip()
+        if branch not in INTEGRICOM_KNOWN_BRANCHES:
+            raise HTTPException(status_code=400, detail=f"'{name}': branch '{branch}' is not a known branch.")
+        clean = {"branch": branch}
+    elif rule_type == "unit_sequence":
+        branches = [b.strip() for b in (params.get("branches") or []) if str(b).strip()]
+        if not branches:
+            raise HTTPException(status_code=400, detail=f"'{name}': unit_sequence requires at least one branch.")
+        unknown = [b for b in branches if b not in INTEGRICOM_KNOWN_BRANCHES]
+        if unknown:
+            raise HTTPException(status_code=400, detail=f"'{name}': unknown branches {unknown}.")
+        clean = {"branches": branches}
+    elif rule_type == "split":
+        branch = (params.get("branch") or "").strip()
+        if branch not in INTEGRICOM_KNOWN_BRANCHES:
+            raise HTTPException(status_code=400, detail=f"'{name}': split branch '{branch}' is not a known branch.")
+        try:
+            amount = Decimal(str(params.get("amount")))
+        except (InvalidOperation, TypeError) as exc:
+            raise HTTPException(status_code=400, detail=f"'{name}': split amount is not a valid number.") from exc
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail=f"'{name}': split amount must be greater than zero.")
+        clean = {"branch": branch, "amount": f"{amount:.2f}"}
+    elif rule_type == "dynamic_user":
+        tokens = [t.strip() for t in (params.get("match_tokens") or []) if str(t).strip()]
+        if not tokens:
+            raise HTTPException(status_code=400, detail=f"'{name}': dynamic_user requires at least one match token.")
+        clean = {"match_tokens": tokens}
+    return {"canonical_name": name, "rule_type": rule_type, "params": clean}
+
+
+def _parse_integricom_rule_updates(raw: str | None, *, learn_only: bool) -> list[dict[str, Any]]:
+    """Parse the analyze-form `integricom_rule_updates` field. When learn_only,
+    restrict to the two simple types offered at upload time."""
+    if not raw:
+        return []
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid integricom_rule_updates JSON: {exc}") from exc
+    if not isinstance(payload, list):
+        raise HTTPException(status_code=400, detail="integricom_rule_updates must be a JSON array.")
+
+    parsed: list[dict[str, Any]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=400, detail="integricom_rule_updates items must be objects.")
+        rule_type = (item.get("rule_type") or "").strip()
+        if learn_only and rule_type not in {"home_office", "single_branch"}:
+            raise HTTPException(
+                status_code=400,
+                detail="At upload time, only 'home_office' or 'single_branch' rules can be learned. Use Admin for richer rules.",
+            )
+        parsed.append(_validate_integricom_rule(item.get("canonical_name"), rule_type, item.get("params") or {}))
     return parsed
 
 
@@ -619,6 +729,7 @@ async def _analyze_integricom(
     invoice_file: UploadFile | None,
     integricom_user_updates: str | None,
     integricom_branch_item_updates: str | None,
+    integricom_rule_updates: str | None = None,
 ) -> dict[str, Any]:
     if invoice_file is None or not invoice_file.filename:
         raise HTTPException(status_code=400, detail="Integricom mode requires an invoice PDF upload.")
@@ -710,6 +821,22 @@ async def _analyze_integricom(
     init_integricom_directory()
     submitted_updates = _parse_user_updates(integricom_user_updates, field_name="integricom_user_updates")
     submitted_branch_item_updates = _parse_integricom_branch_item_updates(integricom_branch_item_updates)
+
+    # Persist any rules the user just chose for previously-unknown lines, BEFORE
+    # loading rules below, so the re-run finds them and never re-prompts.
+    submitted_rule_updates = _parse_integricom_rule_updates(integricom_rule_updates, learn_only=True)
+    if submitted_rule_updates:
+        upsert_allocation_rules(submitted_rule_updates, source="learned")
+
+    # Pre-fill branch assignments from saved history so recurring extras don't re-prompt.
+    # Saved items use canonical_name as line_key; processing.py falls back to that key.
+    saved_branch_item_updates = [
+        {"line_key": item["canonical_name"], "prompt_index": item["prompt_index"], "branch": item["branch"]}
+        for item in load_branch_item_assignments()
+    ]
+    # Submitted updates take precedence — put them after so they overwrite saved entries.
+    merged_branch_item_updates = saved_branch_item_updates + submitted_branch_item_updates
+
     if submitted_updates:
         upsert_integricom_users(
             [
@@ -749,11 +876,13 @@ async def _analyze_integricom(
         allocation_warnings,
         unresolved_emails,
         unresolved_branch_prompts,
+        unresolved_rule_prompts,
     ) = build_integricom_user_allocations(
         export_users,
         directory_profiles,
         parsed_invoice.line_items,
-        branch_item_updates=submitted_branch_item_updates,
+        branch_item_updates=merged_branch_item_updates,
+        rules=load_allocation_rules(),
     )
     all_rows, non_user_rows = _append_integricom_credit_row(
         all_rows,
@@ -767,18 +896,22 @@ async def _analyze_integricom(
 
     needs_user_enrichment = bool(unresolved_emails)
     needs_branch_assignment = bool(unresolved_branch_prompts)
-    if needs_user_enrichment or needs_branch_assignment:
+    needs_rule_assignment = bool(unresolved_rule_prompts)
+    if needs_user_enrichment or needs_branch_assignment or needs_rule_assignment:
         unresolved_set = set(unresolved_emails)
         message_parts: list[str] = []
         if needs_user_enrichment:
             message_parts.append("Some users are missing a branch.")
         if needs_branch_assignment:
             message_parts.append("Some branch-tethered charges need branch assignments.")
+        if needs_rule_assignment:
+            message_parts.append("Some invoice lines have no allocation rule yet.")
         message_parts.append("Enter missing values, then analyze again.")
         return {
             "vendor_type": "integricom",
             "needs_user_enrichment": needs_user_enrichment,
             "needs_non_user_branch_assignment": needs_branch_assignment,
+            "needs_rule_assignment": needs_rule_assignment,
             "message": " ".join(message_parts),
             "new_users": [row for row in user_rows if row["email"] in unresolved_set],
             "user_rows": user_rows,
@@ -787,6 +920,8 @@ async def _analyze_integricom(
             "integricom_non_user_rows": non_user_rows,
             "non_user_branch_prompts": unresolved_branch_prompts,
             "integricom_non_user_branch_prompts": unresolved_branch_prompts,
+            "rule_prompts": unresolved_rule_prompts,
+            "integricom_rule_prompts": unresolved_rule_prompts,
             "missing_users": missing_users,
             "files": file_summaries,
             "summary": [],
@@ -814,6 +949,20 @@ async def _analyze_integricom(
             for user in export_users
         ]
     )
+
+    # Persist any newly submitted branch assignments so future runs skip the prompt.
+    if submitted_branch_item_updates:
+        save_branch_item_assignments(
+            [
+                {
+                    "canonical_name": item["line_key"].split(":", 1)[-1],
+                    "prompt_index": item["prompt_index"],
+                    "branch": item["branch"],
+                }
+                for item in submitted_branch_item_updates
+                if item.get("branch")
+            ]
+        )
 
     summary = build_breakdown(all_rows)
     base_total = sum(Decimal(str(item["total_amount"])) for item in summary)
@@ -958,6 +1107,7 @@ async def analyze(
     adobe_user_updates: str | None = Form(default=None),
     integricom_user_updates: str | None = Form(default=None),
     integricom_branch_item_updates: str | None = Form(default=None),
+    integricom_rule_updates: str | None = Form(default=None),
     integricom_support_updates: str | None = Form(default=None),
 ) -> dict:
     uploads = csv_files or []
@@ -982,6 +1132,7 @@ async def analyze(
             invoice_file,
             integricom_user_updates,
             integricom_branch_item_updates,
+            integricom_rule_updates,
         )
     if vendor == "integricom_support":
         return await _analyze_integricom_support(invoice_file, integricom_support_updates)

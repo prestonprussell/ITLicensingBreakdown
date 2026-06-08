@@ -81,6 +81,7 @@
               <select id="admin-vendor">
                 <option value="adobe">Adobe</option>
                 <option value="integricom">Integricom</option>
+                <option value="integricom-rules">Integricom Allocation Rules</option>
               </select>
             </label>
 
@@ -95,13 +96,14 @@
               <button id="admin-sync-entra-btn" type="button" class="btn-secondary">Sync from Entra</button>
               <button id="admin-import-btn" type="button" class="btn-secondary">Import starting list</button>
               <input id="admin-import-file" type="file" accept=".xlsx,.xlsm,.csv" hidden />
+              <button id="admin-add-rule-btn" type="button" class="btn-secondary">Add rule</button>
               <button id="admin-add-btn" type="button" class="btn-secondary">Add user</button>
               <button id="admin-save-btn" type="button">Save changes</button>
             </div>
           </div>
         </section>
 
-        <section class="section">
+        <section class="section" id="admin-users-section">
           <div class="section-head">
             <h2>Active user mappings</h2>
             <p id="admin-status" class="admin-status">Loading users…</p>
@@ -123,10 +125,34 @@
             </table>
           </div>
         </section>
+
+        <section class="section" id="admin-rules-section" hidden>
+          <div class="section-head">
+            <h2>Integricom allocation rules</h2>
+            <p class="muted-line">
+              Controls how each invoice line is split across branches. Edits persist and apply to every future
+              upload. Deleting a rule makes that line prompt again at the next upload.
+            </p>
+          </div>
+          <div class="table-wrap">
+            <table class="resizable-table">
+              <thead>
+                <tr>
+                  <th>Invoice Line (canonical)</th>
+                  <th>Rule Type</th>
+                  <th>Settings</th>
+                  <th>Source</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-rules-body"></tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
 
     <script src="/static/theme.js?v=2026-04-28-1" defer></script>
-    <script src="/static/admin.js?v=2026-04-02-1" defer></script>
+    <script src="/static/admin.js?v=2026-06-02-1" defer></script>
   </body>
 </html>

@@ -16,6 +16,9 @@ def test_launcher_and_invoice_routes_registered() -> None:
     assert "/apps/invoice-analyzer" in paths
     assert "/apps/admin" in paths
     assert "/api/integricom/sync/entra" in paths
+    assert "/api/integricom/allocation-rules" in paths
+    assert "/api/integricom/allocation-rules/save" in paths
+    assert "/api/integricom/allocation-rules/delete" in paths
 
 
 def test_launcher_html_lists_invoice_analyzer() -> None:
@@ -27,7 +30,7 @@ def test_launcher_html_lists_invoice_analyzer() -> None:
 
 
 def test_integricom_mode_allows_missing_csv_upload(monkeypatch) -> None:
-    async def fake_analyze_integricom(_uploads, _invoice_file, _user_updates, _branch_updates):
+    async def fake_analyze_integricom(_uploads, _invoice_file, _user_updates, _branch_updates, _rule_updates=None):
         return {"vendor_type": "integricom", "ok": True}
 
     monkeypatch.setattr(main_module, "_analyze_integricom", fake_analyze_integricom)
@@ -136,3 +139,54 @@ def test_append_integricom_credit_row_adds_home_office_credit_preview_row() -> N
         and row["amount"] == main_module.Decimal("-54.00")
         for row in updated_line_rows
     )
+
+
+def test_allocation_rules_endpoints_crud(monkeypatch, tmp_path) -> None:
+    from app import integricom_directory
+    monkeypatch.setattr(integricom_directory, "INTEGRICOM_DIRECTORY_DB", tmp_path / "rules.sqlite3")
+
+    listing = main_module.get_integricom_allocation_rules()
+    assert listing["vendor"] == "integricom"
+    assert listing["count"] == len(integricom_directory.SEED_INTEGRICOM_RULES)
+    assert "Home Office" in listing["branches"]
+    assert "single_branch" in listing["rule_types"]
+
+    saved = main_module.save_integricom_allocation_rules(
+        [{"canonical_name": "New Managed Item", "rule_type": "single_branch", "params": {"branch": "Grayson"}}]
+    )
+    assert saved == {"received": 1, "saved": 1}
+
+    rules = integricom_directory.load_allocation_rules()
+    assert rules["New Managed Item"] == {"rule_type": "single_branch", "params": {"branch": "Grayson"}}
+
+    deleted = main_module.delete_integricom_allocation_rules({"canonical_names": ["New Managed Item"]})
+    assert deleted == {"requested": 1, "deleted": 1}
+    assert "New Managed Item" not in integricom_directory.load_allocation_rules()
+
+
+def test_allocation_rules_save_rejects_unknown_branch(monkeypatch, tmp_path) -> None:
+    from app import integricom_directory
+    monkeypatch.setattr(integricom_directory, "INTEGRICOM_DIRECTORY_DB", tmp_path / "rules.sqlite3")
+
+    with pytest.raises(main_module.HTTPException) as exc:
+        main_module.save_integricom_allocation_rules(
+            [{"canonical_name": "X", "rule_type": "single_branch", "params": {"branch": "Atlantis"}}]
+        )
+    assert exc.value.status_code == 400
+
+
+def test_rule_updates_parser_learn_only_restricts_types() -> None:
+    import json as _json
+    # Allowed at upload time.
+    parsed = main_module._parse_integricom_rule_updates(
+        _json.dumps([{"canonical_name": "New Line", "rule_type": "single_branch", "params": {"branch": "Tampa"}}]),
+        learn_only=True,
+    )
+    assert parsed == [{"canonical_name": "New Line", "rule_type": "single_branch", "params": {"branch": "Tampa"}}]
+
+    # Rich types are rejected at upload time (Admin-only).
+    with pytest.raises(main_module.HTTPException):
+        main_module._parse_integricom_rule_updates(
+            _json.dumps([{"canonical_name": "New Line", "rule_type": "split", "params": {"branch": "Tampa", "amount": "5"}}]),
+            learn_only=True,
+        )

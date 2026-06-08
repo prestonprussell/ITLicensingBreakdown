@@ -277,7 +277,7 @@ def test_build_integricom_user_allocations_applies_dynamic_and_home_office_remai
         ),
     ]
 
-    rows, user_rows, non_user_rows, warnings, unresolved, unresolved_branch_prompts = build_integricom_user_allocations(
+    rows, user_rows, non_user_rows, warnings, unresolved, unresolved_branch_prompts, _rule_prompts = build_integricom_user_allocations(
         users,
         {},
         invoice_lines,
@@ -321,7 +321,7 @@ def test_build_integricom_user_allocations_prefers_construction_over_saved_branc
         ),
     ]
 
-    rows, user_rows, _non_user_rows, _warnings, _unresolved, _prompts = build_integricom_user_allocations(
+    rows, user_rows, _non_user_rows, _warnings, _unresolved, _prompts, _rule_prompts = build_integricom_user_allocations(
         users,
         {
             "user1@example.com": {
@@ -348,7 +348,7 @@ def test_integricom_branch_tethered_extra_quantity_requires_assignment_prompt() 
         )
     ]
 
-    rows, _user_rows, _non_user_rows, warnings, _unresolved, unresolved_branch_prompts = build_integricom_user_allocations(
+    rows, _user_rows, _non_user_rows, warnings, _unresolved, unresolved_branch_prompts, _rule_prompts = build_integricom_user_allocations(
         [],
         {},
         invoice_lines,
@@ -370,7 +370,7 @@ def test_integricom_branch_tethered_extra_quantity_requires_assignment_prompt() 
         }
     ]
 
-    rows_after, _u2, _n2, _w2, _e2, unresolved_after = build_integricom_user_allocations(
+    rows_after, _u2, _n2, _w2, _e2, unresolved_after, _rule_prompts2 = build_integricom_user_allocations(
         [],
         {},
         invoice_lines,
@@ -438,3 +438,45 @@ def test_integricom_support_user_override_clears_review_flag() -> None:
     assert support_rows[0]["needs_review"] is False
     assert support_rows[0]["confidence"] == "user"
     assert not warnings
+
+
+def test_unknown_line_emits_rule_prompt_and_keeps_home_office_fallback() -> None:
+    invoice_lines = [
+        IntegricomInvoiceLine(
+            description="Brand New Service",
+            canonical_name="Brand New Service",
+            quantity=Decimal("1.00"),
+            unit_price=Decimal("40.00"),
+            amount=Decimal("40.00"),
+        )
+    ]
+    rows, _u, _n, warnings, _e, _bp, rule_prompts = build_integricom_user_allocations([], {}, invoice_lines)
+    summary = build_breakdown(rows)
+    by_key = {(r["branch"], r["license"]): r["total_amount"] for r in summary}
+
+    # Parity: unknown still falls back to Home Office + warning.
+    assert by_key[(INTEGRICOM_HOME_OFFICE, "Brand New Service")] == 40.0
+    assert any("no Integricom allocation rule configured" in w for w in warnings)
+    # Additive: a rule prompt is surfaced so the analyze flow can learn a rule.
+    assert [p["canonical_name"] for p in rule_prompts] == ["Brand New Service"]
+
+
+def test_learned_rule_routes_line_and_suppresses_prompt() -> None:
+    invoice_lines = [
+        IntegricomInvoiceLine(
+            description="Brand New Service",
+            canonical_name="Brand New Service",
+            quantity=Decimal("1.00"),
+            unit_price=Decimal("40.00"),
+            amount=Decimal("40.00"),
+        )
+    ]
+    rules = {"Brand New Service": {"rule_type": "single_branch", "params": {"branch": "Tampa"}}}
+    rows, _u, _n, _w, _e, _bp, rule_prompts = build_integricom_user_allocations(
+        [], {}, invoice_lines, rules=rules
+    )
+    summary = build_breakdown(rows)
+    by_key = {(r["branch"], r["license"]): r["total_amount"] for r in summary}
+
+    assert by_key[("Tampa", "Brand New Service")] == 40.0
+    assert rule_prompts == []

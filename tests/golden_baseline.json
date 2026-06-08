@@ -1,0 +1,364 @@
+{
+  "branch_prompts": [
+    {
+      "branch": "",
+      "license": "Firewall Security Subscription District Office",
+      "prompt_index": 1
+    },
+    {
+      "branch": "",
+      "license": "Firewall Security Subscription District Office",
+      "prompt_index": 2
+    }
+  ],
+  "breakdown_csv": "Branch,Total\r\nAcworth,61.0\r\nCanton,61.0\r\nCharleston,32.0\r\nCobb,12.0\r\nColor Burst,12.0\r\nDestin,12.0\r\nDoraville,12.0\r\nFort Walton,12.0\r\nHome Office,589.0\r\nNashville,12.0\r\nPensacola,5.0\r\nSavannah,12.0\r\nSt. Pete,55.0\r\nSugar Hill,157.0\r\nTampa,12.0\r\nGrand Total,,1056.0\r\n\r\nBranch,License,TotalAmount,BranchTotal\r\nAcworth,Firewall Security Subscription District Office,7.0,61.0\r\nAcworth,NetWatch360 Managed Firewall,20.0,61.0\r\nAcworth,NetWatch360 Managed Internet,5.0,61.0\r\nAcworth,Office 365 Cloud Backup,4.0,61.0\r\nAcworth,Workstation,25.0,61.0\r\nCanton,Firewall Security Subscription District Office,7.0,61.0\r\nCanton,NetWatch360 Managed Firewall,20.0,61.0\r\nCanton,NetWatch360 Managed Internet,5.0,61.0\r\nCanton,Office 365 Cloud Backup,4.0,61.0\r\nCanton,Workstation,25.0,61.0\r\nCharleston,Firewall Security Subscription District Office,7.0,32.0\r\nCharleston,NetWatch360 Managed Firewall,20.0,32.0\r\nCharleston,NetWatch360 Managed Internet,5.0,32.0\r\nCobb,Firewall Security Subscription District Office,7.0,12.0\r\nCobb,NetWatch360 Managed Internet,5.0,12.0\r\nColor Burst,Firewall Security Subscription District Office,7.0,12.0\r\nColor Burst,NetWatch360 Managed Internet,5.0,12.0\r\nDestin,Firewall Security Subscription District Office,7.0,12.0\r\nDestin,NetWatch360 Managed Internet,5.0,12.0\r\nDoraville,Firewall Security Subscription District Office,7.0,12.0\r\nDoraville,NetWatch360 Managed Internet,5.0,12.0\r\nFort Walton,Firewall Security Subscription District Office,7.0,12.0\r\nFort Walton,NetWatch360 Managed Internet,5.0,12.0\r\nHome Office,AWS Cloud Server,26.0,589.0\r\nHome Office,DP Server Image Backup Cloud,20.0,589.0\r\nHome Office,Dark Web Monitoring,14.0,589.0\r\nHome Office,Documentation System License,12.0,589.0\r\nHome Office,Dropbox Business Standard,19.0,589.0\r\nHome Office,Firewall Security Subscription Main Office,93.0,589.0\r\nHome Office,IT Automation Tool,15.0,589.0\r\nHome Office,Keeper Enterprise Password Manager,27.0,589.0\r\nHome Office,M365 Intune,24.0,589.0\r\nHome Office,M365 Microsoft E5,23.0,589.0\r\nHome Office,Microsoft Teams Essentials NCE Annual,22.0,589.0\r\nHome Office,Monthly Block Hours,13.0,589.0\r\nHome Office,NetWatch360 MAC,17.0,589.0\r\nHome Office,NetWatch360 Managed Internet,5.0,589.0\r\nHome Office,NetWatch360 Managed Network Device,29.0,589.0\r\nHome Office,NetWatch360 Managed Server,18.0,589.0\r\nHome Office,Office 365 Cloud Backup,12.0,589.0\r\nHome Office,Power BI Pro,21.0,589.0\r\nHome Office,Prorated M365,25.0,589.0\r\nHome Office,Teams Audio Conferencing,28.0,589.0\r\nHome Office,Teams Rooms Pro,16.0,589.0\r\nHome Office,Ticketing System User License,11.0,589.0\r\nHome Office,Totally Unknown Charge XYZ,99.0,589.0\r\nNashville,Firewall Security Subscription District Office,7.0,12.0\r\nNashville,NetWatch360 Managed Internet,5.0,12.0\r\nPensacola,NetWatch360 Managed Internet,5.0,5.0\r\nSavannah,Firewall Security Subscription District Office,7.0,12.0\r\nSavannah,NetWatch360 Managed Internet,5.0,12.0\r\nSt. Pete,Firewall Security Subscription Latest 2025,50.0,55.0\r\nSt. Pete,NetWatch360 Managed Internet,5.0,55.0\r\nSugar Hill,Firewall Security Subscription Main Office,97.0,157.0\r\nSugar Hill,Project Plan 3,60.0,157.0\r\nTampa,Firewall Security Subscription District Office,7.0,12.0\r\nTampa,NetWatch360 Managed Internet,5.0,12.0\r\n",
+  "non_user_rows": [
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Acworth",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Acworth",
+      "license": "NetWatch360 Managed Firewall",
+      "total_amount": 20.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Acworth",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Canton",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Canton",
+      "license": "NetWatch360 Managed Firewall",
+      "total_amount": 20.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Canton",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Charleston",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Charleston",
+      "license": "NetWatch360 Managed Firewall",
+      "total_amount": 20.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Charleston",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Cobb",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Cobb",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Color Burst",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Color Burst",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Destin",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Destin",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Doraville",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Doraville",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Fort Walton",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Fort Walton",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "AWS Cloud Server",
+      "total_amount": 26.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "DP Server Image Backup Cloud",
+      "total_amount": 20.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Dark Web Monitoring",
+      "total_amount": 14.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Documentation System License",
+      "total_amount": 12.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Dropbox Business Standard",
+      "total_amount": 19.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Firewall Security Subscription Main Office",
+      "total_amount": 93.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "IT Automation Tool",
+      "total_amount": 15.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Keeper Enterprise Password Manager",
+      "total_amount": 27.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "M365 Intune",
+      "total_amount": 24.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "M365 Microsoft E5",
+      "total_amount": 23.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Microsoft Teams Essentials NCE Annual",
+      "total_amount": 22.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Monthly Block Hours",
+      "total_amount": 13.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "NetWatch360 MAC",
+      "total_amount": 17.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "NetWatch360 Managed Network Device",
+      "total_amount": 29.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "NetWatch360 Managed Server",
+      "total_amount": 18.0
+    },
+    {
+      "allocation_type": "Invoice Delta",
+      "branch": "Home Office",
+      "license": "Office 365 Cloud Backup",
+      "total_amount": 12.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Power BI Pro",
+      "total_amount": 21.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Prorated M365",
+      "total_amount": 25.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Teams Audio Conferencing",
+      "total_amount": 28.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Teams Rooms Pro",
+      "total_amount": 16.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Ticketing System User License",
+      "total_amount": 11.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Home Office",
+      "license": "Totally Unknown Charge XYZ",
+      "total_amount": 99.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Nashville",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Nashville",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Pensacola",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Savannah",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Savannah",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "St. Pete",
+      "license": "Firewall Security Subscription Latest 2025",
+      "total_amount": 50.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "St. Pete",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Sugar Hill",
+      "license": "Firewall Security Subscription Main Office",
+      "total_amount": 97.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Sugar Hill",
+      "license": "Project Plan 3",
+      "total_amount": 60.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Tampa",
+      "license": "Firewall Security Subscription District Office",
+      "total_amount": 7.0
+    },
+    {
+      "allocation_type": "Fixed Branch Item",
+      "branch": "Tampa",
+      "license": "NetWatch360 Managed Internet",
+      "total_amount": 5.0
+    }
+  ],
+  "rule_prompts": [],
+  "unresolved_emails": [],
+  "user_rows": [
+    {
+      "branch": "Acworth",
+      "email": "alice@x.com",
+      "first_name": "Alice",
+      "known_user": true,
+      "last_name": "A",
+      "license_list": "Workstation, Office 365 Cloud Backup",
+      "user_total": 29.0
+    },
+    {
+      "branch": "Canton",
+      "email": "bob@x.com",
+      "first_name": "Bob",
+      "known_user": true,
+      "last_name": "B",
+      "license_list": "Workstation, Office 365 Cloud Backup",
+      "user_total": 29.0
+    }
+  ],
+  "warnings": [
+    "Firewall Security Subscription District Office: 2 extra branch assignment(s) required before this charge can be finalized.",
+    "Firewall Security Subscription Main Office: invoice amount was below expected split baseline; allocated entirely to Home Office.",
+    "NetWatch360 Managed Firewall: invoice quantity is 3; template allocation used the first 3 branches.",
+    "Office 365 Cloud Backup: invoice quantity is 5, matched users are 2; difference allocated to Home Office.",
+    "Totally Unknown Charge XYZ: no Integricom allocation rule configured; amount allocated to Home Office."
+  ]
+}
