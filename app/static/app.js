@@ -606,6 +606,53 @@ function collectNonUserUpdates() {
   }));
 }
 
+// Map changed "Fixed Branch Item" rows to allocation-rule branch edits so they
+// persist for future invoices. Only Fixed Branch Item rows are rule-driven;
+// Invoice Delta / Credit / Reconciliation rows are derived and not persisted.
+function collectFixedBranchItemEdits(nonUserUpdates) {
+  const edits = [];
+  currentNonUserRows.forEach((row, idx) => {
+    if ((row.allocation_type || "") !== "Fixed Branch Item") return;
+    const newBranch = (nonUserUpdates[idx]?.branch || "").trim();
+    const oldBranch = (row.branch || "").trim();
+    if (!newBranch || newBranch === oldBranch) return;
+    edits.push({ canonical_name: row.license, old_branch: oldBranch, new_branch: newBranch });
+  });
+  return edits;
+}
+
+async function persistFixedBranchItemEdits(nonUserUpdates) {
+  if (currentUserVendor !== "integricom") return;
+  const edits = collectFixedBranchItemEdits(nonUserUpdates);
+  if (!edits.length) return;
+
+  try {
+    const response = await fetch("/api/integricom/allocation-rules/from-breakdown", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(edits),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || "Failed to save branch rule edits.");
+
+    const li = document.createElement("li");
+    if (result.saved) {
+      li.textContent = `Saved ${result.saved} branch rule change(s) — these now apply to future invoices too.`;
+    }
+    if (result.skipped && result.skipped.length) {
+      const names = result.skipped.map((s) => `${s.canonical_name} (${s.reason})`).join("; ");
+      const warn = document.createElement("li");
+      warn.textContent = `Not saved as a rule: ${names}`;
+      warningsList.prepend(warn);
+    }
+    if (result.saved) warningsList.prepend(li);
+  } catch (error) {
+    const li = document.createElement("li");
+    li.textContent = error.message;
+    warningsList.prepend(li);
+  }
+}
+
 function buildSummaryCsv(summaryRows) {
   const branchTotals = new Map();
   (summaryRows || []).forEach((row) => {
@@ -944,6 +991,7 @@ saveBranchesBtn.addEventListener("click", async () => {
 
   if (!currentUserRows.length || !currentUserVendor) {
     if (hasNonUserBranchChanges) {
+      await persistFixedBranchItemEdits(nonUserUpdates);
       applyNonUserEditsToSummary(nonUserUpdates);
       currentNonUserRows = nonUserUpdates;
       renderNonUserTable(currentNonUserRows);
@@ -983,6 +1031,7 @@ saveBranchesBtn.addEventListener("click", async () => {
     renderUserTable(currentUserRows);
 
     if (hasNonUserBranchChanges) {
+      await persistFixedBranchItemEdits(nonUserUpdates);
       applyNonUserEditsToSummary(nonUserUpdates);
       currentNonUserRows = nonUserUpdates;
       renderNonUserTable(currentNonUserRows);

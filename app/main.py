@@ -289,6 +289,74 @@ def delete_integricom_allocation_rules(payload: dict[str, Any] = Body(...)) -> d
     return {"requested": len(names), "deleted": count}
 
 
+def _apply_breakdown_branch_edit(rule: dict | None, old_branch: str, new_branch: str) -> dict | None:
+    """Translate a single Fixed-Branch-Item branch edit into an updated rule.
+
+    Returns the new params dict (with a synthesized rule_type) or None when the
+    edit can't be unambiguously expressed as a rule change. Returned shape:
+    {"rule_type": ..., "params": ...}.
+    """
+    rule_type = (rule or {}).get("rule_type")
+    params = (rule or {}).get("params") or {}
+
+    # No rule yet (e.g. a learned/unknown line) -> a branch edit just pins it.
+    if rule is None or rule_type in {"home_office", "single_branch"}:
+        if new_branch == INTEGRICOM_HOME_OFFICE:
+            return {"rule_type": "home_office", "params": {}}
+        return {"rule_type": "single_branch", "params": {"branch": new_branch}}
+
+    if rule_type == "unit_sequence":
+        branches = list(params.get("branches") or [])
+        if old_branch not in branches:
+            return None  # editing a remainder/Home-Office row is ambiguous
+        idx = branches.index(old_branch)
+        branches[idx] = new_branch
+        return {"rule_type": "unit_sequence", "params": {"branches": branches}}
+
+    if rule_type == "split":
+        if old_branch == params.get("branch"):
+            return {"rule_type": "split", "params": {**params, "branch": new_branch}}
+        return None  # editing the Home-Office remainder of a split is ambiguous
+
+    return None  # dynamic_user lines are per-user; not editable from the breakdown
+
+
+@app.post("/api/integricom/allocation-rules/from-breakdown")
+def update_integricom_rules_from_breakdown(payload: list[dict[str, Any]] = Body(...)) -> dict[str, Any]:
+    """Persist branch edits made to Fixed Branch Item rows in the breakdown by
+    updating the underlying allocation rules, so they apply to future invoices."""
+    if not isinstance(payload, list):
+        raise HTTPException(status_code=400, detail="Expected a JSON array of branch edits.")
+
+    rules = load_allocation_rules()
+    to_upsert: list[dict[str, Any]] = []
+    skipped: list[dict[str, str]] = []
+
+    for item in payload:
+        name = (item.get("canonical_name") or "").strip()
+        old_branch = (item.get("old_branch") or "").strip()
+        new_branch = (item.get("new_branch") or "").strip()
+        if not name or not new_branch:
+            continue
+        if new_branch not in INTEGRICOM_KNOWN_BRANCHES:
+            skipped.append({"canonical_name": name, "reason": f"'{new_branch}' is not a known branch."})
+            continue
+        if old_branch == new_branch:
+            continue
+
+        updated = _apply_breakdown_branch_edit(rules.get(name), old_branch, new_branch)
+        if updated is None:
+            skipped.append({
+                "canonical_name": name,
+                "reason": "Multi-branch rule — edit this line in Admin → Allocation Rules.",
+            })
+            continue
+        to_upsert.append({"canonical_name": name, "rule_type": updated["rule_type"], "params": updated["params"]})
+
+    saved = upsert_allocation_rules(to_upsert, source="admin") if to_upsert else 0
+    return {"received": len(payload), "saved": saved, "skipped": skipped}
+
+
 @app.post("/api/integricom/sync/entra")
 def sync_integricom_users_from_entra_endpoint() -> dict[str, Any]:
     try:
