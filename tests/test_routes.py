@@ -19,6 +19,7 @@ def test_launcher_and_invoice_routes_registered() -> None:
     assert "/api/integricom/allocation-rules" in paths
     assert "/api/integricom/allocation-rules/save" in paths
     assert "/api/integricom/allocation-rules/delete" in paths
+    assert "/api/integricom/allocation-rules/from-breakdown" in paths
 
 
 def test_launcher_html_lists_invoice_analyzer() -> None:
@@ -190,3 +191,49 @@ def test_rule_updates_parser_learn_only_restricts_types() -> None:
             _json.dumps([{"canonical_name": "New Line", "rule_type": "split", "params": {"branch": "Tampa", "amount": "5"}}]),
             learn_only=True,
         )
+
+
+def test_breakdown_branch_edit_persists_as_rule(monkeypatch, tmp_path) -> None:
+    from app import integricom_directory
+    monkeypatch.setattr(integricom_directory, "INTEGRICOM_DIRECTORY_DB", tmp_path / "rules.sqlite3")
+    integricom_directory.init_integricom_directory()
+
+    # home_office line moved to a branch -> becomes single_branch and persists.
+    result = main_module.update_integricom_rules_from_breakdown(
+        [{"canonical_name": "Dark Web Monitoring", "old_branch": "Home Office", "new_branch": "Acworth"}]
+    )
+    assert result["saved"] == 1
+    assert result["skipped"] == []
+    rules = integricom_directory.load_allocation_rules()
+    assert rules["Dark Web Monitoring"] == {"rule_type": "single_branch", "params": {"branch": "Acworth"}}
+
+
+def test_breakdown_unit_sequence_edit_swaps_branch(monkeypatch, tmp_path) -> None:
+    from app import integricom_directory
+    monkeypatch.setattr(integricom_directory, "INTEGRICOM_DIRECTORY_DB", tmp_path / "rules.sqlite3")
+    integricom_directory.init_integricom_directory()
+
+    main_module.update_integricom_rules_from_breakdown(
+        [{"canonical_name": "NetWatch360 Managed Firewall", "old_branch": "Acworth", "new_branch": "Grayson"}]
+    )
+    branches = integricom_directory.load_allocation_rules()["NetWatch360 Managed Firewall"]["params"]["branches"]
+    assert "Acworth" not in branches
+    assert branches[0] == "Grayson"
+
+
+def test_breakdown_edit_skips_ambiguous_and_unknown_branch(monkeypatch, tmp_path) -> None:
+    from app import integricom_directory
+    monkeypatch.setattr(integricom_directory, "INTEGRICOM_DIRECTORY_DB", tmp_path / "rules.sqlite3")
+    integricom_directory.init_integricom_directory()
+
+    # Editing the Home-Office remainder of a split is ambiguous -> skipped, not saved.
+    res1 = main_module.update_integricom_rules_from_breakdown(
+        [{"canonical_name": "Firewall Security Subscription Main Office", "old_branch": "Home Office", "new_branch": "Tampa"}]
+    )
+    assert res1["saved"] == 0 and len(res1["skipped"]) == 1
+
+    # Unknown branch is rejected (skipped), not saved.
+    res2 = main_module.update_integricom_rules_from_breakdown(
+        [{"canonical_name": "Dark Web Monitoring", "old_branch": "Home Office", "new_branch": "Atlantis"}]
+    )
+    assert res2["saved"] == 0 and "not a known branch" in res2["skipped"][0]["reason"]
